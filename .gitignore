@@ -1,0 +1,27 @@
+# Dépendances (réinstallables via npm install)
+node_modules/
+
+# Base de données SQLite locale (données personnelles — jamais en ligne)
+server/tripa.db
+server/tripa.db-*
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Environnement / secrets
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Système d'exploitation
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Captures d'écran / artefacts temporaires
+*.png
+_*.js

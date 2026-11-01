@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIPA - Paramètres</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/app.css">
+    
+    <style>
+        @media (min-width: 768px) {
+            .settings-grid {
+                display: grid;
+                grid-template-columns: 250px 1fr;
+                gap: 2rem;
+            }
+        }
+        
+        .settings-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .settings-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border-left: 3px solid transparent;
+        }
+        
+        .settings-link:hover {
+            background-color: var(--color-bg-glass-hover);
+            color: var(--color-text-primary);
+        }
+        
+        .settings-link.active {
+            background-color: var(--color-accent-primary-light);
+            color: var(--color-accent-primary);
+            border-left-color: var(--color-accent-primary);
+        }
+        
+        .type-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .type-card {
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            background-color: var(--color-bg-card);
+        }
+        
+        .type-card:hover {
+            border-color: var(--color-accent-primary);
+        }
+        
+        .type-card.selected {
+            border-color: var(--color-accent-primary);
+            background-color: var(--color-accent-primary-light);
+        }
+        
+        .type-card .icon-large {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .avatar-upload {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+        
+        .avatar-upload .avatar {
+            width: 100px;
+            height: 100px;
+            font-size: 2.5rem;
+        }
+        
+        .avatar-edit-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background-color: var(--color-accent-primary);
+            color: var(--color-text-inverse);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .info-box {
+            background-color: rgba(66, 153, 225, 0.1);
+            border-left: 4px solid #4299e1;
+            padding: 1rem;
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        /* ---- Section Apparence : palettes de couleurs ---- */
+        .accent-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 1rem;
+        }
+        
+        .accent-chip {
+            border: 1px solid var(--color-border);
+            background: var(--color-bg-card);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            color: var(--color-text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+        
+        .accent-chip:hover {
+            border-color: var(--color-accent-primary);
+        }
+        
+        .accent-chip.selected {
+            border-color: var(--color-accent-primary);
+            background: var(--color-accent-primary-light);
+            color: var(--color-text-primary);
+        }
+        
+        .accent-swatch {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.08);
+        }
+    </style>
+</head>
+<body class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar__logo flex items-center gap-2">
+            <div class="avatar avatar--accent">
+                <i data-lucide="users"></i>
+            </div>
+            <h2>TRIPA</h2>
+        </div>
+
+        <nav class="sidebar__nav">
+                <a href="dashboard.html" class="sidebar__link ">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Tableau de bord</span>
+                </a>
+                <a href="members.html" class="sidebar__link ">
+                    <i data-lucide="users"></i>
+                    <span>Membres</span>
+                </a>
+                <a href="finances.html" class="sidebar__link ">
+                    <i data-lucide="wallet"></i>
+                    <span>Finances</span>
+                </a>
+                <a href="meetings.html" class="sidebar__link ">
+                    <i data-lucide="calendar"></i>
+                    <span>Réunions</span>
+                </a>
+                <a href="events.html" class="sidebar__link ">
+                    <i data-lucide="calendar-days"></i>
+                    <span>Événements</span>
+                </a>
+                <a href="votes.html" class="sidebar__link ">
+                    <i data-lucide="vote"></i>
+                    <span>Votes</span>
+                </a>
+                
+                <div class="sidebar__section-label">Outils</div>
+                
+                <a href="messages.html" class="sidebar__link ">
+                    <i data-lucide="message-square"></i>
+                    <span>Messagerie</span>
+                </a>
+                <a href="documents.html" class="sidebar__link ">
+                    <i data-lucide="folder"></i>
+                    <span>Documents</span>
+                </a>
+                <a href="projects.html" class="sidebar__link ">
+                    <i data-lucide="kanban"></i>
+                    <span>Projets</span>
+                </a>
+                
+                <div style="flex:1"></div>
+                
+                <a href="settings.html" class="sidebar__link sidebar__link--active">
+                    <i data-lucide="settings"></i>
+                    <span>Paramètres</span>
+                </a>
+            </nav>
+    </aside>
+
+    <div class="main-content">
+        <!-- Header -->
+        <header class="header flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button class="btn btn--ghost sidebar-toggle md-hidden" id="sidebarToggle">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h2 class="header__title">Paramètres</h2>
+            </div>
+            <div class="header__right" id="headerActions"></div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="page-content">
+            <div class="page-header animate-fade-in stagger-1">
+                <div class="page-header__info">
+                    <h1 class="page-title">Paramètres</h1>
+                    <p class="page-subtitle text-muted">Gérez votre profil et les configurations de l'association</p>
+                </div>
+            </div>
+
+            <div class="settings-grid animate-fade-in stagger-2">
+                
+                <!-- Settings Nav -->
+                <nav class="settings-nav card" style="padding: 1rem 0; height: fit-content;">
+                    <button class="settings-link active" onclick="switchSection('profile', this)">
+                        <i data-lucide="user"></i> Profil
+                    </button>
+                    <button class="settings-link" onclick="switchSection('association', this)">
+                        <i data-lucide="building"></i> Association
+                    </button>
+                    <button class="settings-link" onclick="switchSection('roles', this)">
+                        <i data-lucide="shield"></i> Rôles & Permissions
+                    </button>
+                    <button class="settings-link" id="link-apparence" onclick="switchSection('apparence', this)">
+                        <i data-lucide="palette"></i> Apparence
+                    </button>
+                    <button class="settings-link" onclick="switchSection('notifications', this)">
+                        <i data-lucide="bell"></i> Notifications
+                    </button>
+                    <button class="settings-link" onclick="switchSection('security', this)">
+                        <i data-lucide="lock"></i> Sécurité
+                    </button>
+                </nav>
+
+                <!-- Content Area -->
+                <div class="settings-content">
+                    
+                    <!-- Profile Section -->
+                    <div id="section-profile" class="card card__body animate-fade-in">
+                        <h3 style="margin-bottom: 2rem;">Informations Personnelles</h3>
+                        
+                        <div class="avatar-upload">
+                            <div class="avatar">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin Avatar">
+                            </div>
+                            <button class="avatar-edit-btn">
+                                <i data-lucide="camera" class="icon-sm"></i>
+                            </button>
+                        </div>
+                        
+                        <form class="flex" style="flex-direction: column; gap: 1.5rem;">
+                            <div class="grid grid-2 gap-4">
+                                <div class="form-group">
+                                    <label class="form-label">Prénom</label>
+                                    <input type="text" class="form-input" value="Jean">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nom</label>
+                                    <input type="text" class="form-input" value="Dupont">
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-2 gap-4">
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-input" value="jean.dupont@example.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Téléphone</label>
+                                    <input type="tel" class="form-input" value="+33 6 12 34 56 78">
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end mt-4">
+                                <button type="button" class="btn btn--primary">Enregistrer les modifications</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Association Section -->
+                    <div id="section-association" class="card card__body animate-fade-in" style="display: none;">
+                        <h3 style="margin-bottom: 2rem;">Paramètres de l'Association</h3>
+                        
+                        <form class="flex" style="flex-direction: column; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label class="form-label">Nom de l'association</label>
+                                <input type="text" class="form-input" value="Amicale des Anciens">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Type d'association (Sélectionnez un ou plusieurs)</label>
+                                <div class="type-selector">
+                                    <div class="type-card selected" onclick="this.classList.toggle('selected')">
+                                        <span class="icon-large">🕊️</span>
+                                        <strong>Religieuse</strong>
+                                    </div>
+                                    <div class="type-card selected" onclick="this.classList.toggle('selected')">
+                                        <span class="icon-large">🤝</span>
+                                        <strong>Amicale</strong>
+                                    </div>
+                                    <div class="type-card selected" onclick="this.classList.toggle('selected')">
+                                        <span class="icon-large">👨‍👩‍👧‍👦</span>
+                                        <strong>Familiale</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-input" rows="4">Association ayant pour but de réunir les anciens élèves et de promouvoir l'entraide.</textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Adresse</label>
+                                <input type="text" class="form-input" value="123 Rue de la République, 75001 Paris">
+                            </div>
+
+                            <hr style="border-color: var(--border); margin: 1rem 0;">
+
+                            <h4 style="margin-bottom: 1rem;">Backend TRIPA</h4>
+                            <div class="info-box flex gap-2">
+                                <i data-lucide="info" class="text-primary" style="flex-shrink: 0;"></i>
+                                <p>Les données sont stockées sur le backend TRIPA (Node/Express + SQLite). L'adresse de l'API est <strong id="apiBaseLabel">http://localhost:3000/api</strong>. Pour la changer, définissez <strong>window.TRIPA_API_BASE</strong> ou modifiez <strong>js/api.js</strong>.</p>
+                            </div>
+
+                            <div class="flex justify-end mt-4">
+                                <button type="button" class="btn btn--primary">Enregistrer les paramètres</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Other Placeholder Sections -->
+                    <div id="section-roles" class="card card__body animate-fade-in" style="display: none;">
+                        <h3 style="margin-bottom: 1rem;">Rôles & Permissions</h3>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">Rôles disponibles pour les membres gérés par les administrateurs. Pour créer un rôle personnalisé, rendez-vous dans la section <strong>Membres</strong> (bouton « Nouveau membre → Créer un rôle »).</p>
+                        <div id="rolesList" class="flex gap-2 flex-wrap"></div>
+                    </div>
+                    
+                    <div id="section-apparence" class="card card__body animate-fade-in" style="display: none;">
+                        <h3 style="margin-bottom: 1rem;">Couleur de l'application</h3>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">Choisissez la couleur principale (accent) de TRIPA. Ce choix est enregistré sur cet appareil et appliqué sur toutes les pages.</p>
+                        <div class="accent-grid" id="accentGrid"></div>
+                    </div>
+                    
+                    <div id="section-notifications" class="card card__body animate-fade-in" style="display: none;">
+                        <h3>Notifications</h3>
+                        <p class="text-muted mt-4">Préférences de notifications en cours de développement...</p>
+                    </div>
+                    
+                    <div id="section-security" class="card card__body animate-fade-in" style="display: none;">
+                        <h3>Sécurité</h3>
+                        <p class="text-muted mt-4">Paramètres de sécurité en cours de développement...</p>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Mobile Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        if (sidebarToggle && sidebar) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+        }
+        
+        // Section Switching
+        function switchSection(sectionId, btnElement) {
+            // Update buttons
+            document.querySelectorAll('.settings-link').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            
+            // Update sections
+            document.querySelectorAll('[id^="section-"]').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById('section-' + sectionId).style.display = 'block';
+        }
+
+        const escS = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[c]);
+
+        // ---- Section Apparence : choix de la couleur de l'application ----
+        function renderAccentGrid() {
+            const grid = document.getElementById('accentGrid');
+            if (!grid || typeof ACCENT_PALETTES === 'undefined') return;
+            const current = getAccent();
+            grid.innerHTML = ACCENT_PALETTES.map(p => `
+                <button type="button" class="accent-chip ${p.id === current ? 'selected' : ''}" data-accent-id="${p.id}">
+                    <span class="accent-swatch" style="background:${p.color};"></span>
+                    <span>${escS(p.label)}</span>
+                </button>`).join('');
+            grid.querySelectorAll('.accent-chip').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    setAccent(btn.dataset.accentId);
+                    renderAccentGrid();
+                    lucide.createIcons();
+                    showToast('Couleur de l\u2019application mise à jour.', 'success');
+                });
+            });
+        }
+
+        // ---- Section Rôles : liste des rôles disponibles ----
+        function renderRolesList() {
+            const box = document.getElementById('rolesList');
+            if (!box || typeof getRoles !== 'function') return;
+            box.innerHTML = Object.entries(getRoles())
+                .map(([key, r]) => `<span class="badge badge--${r.color}">${escS(r.label)}</span>`)
+                .join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAccentGrid();
+            renderRolesList();
+            if (location.hash === '#apparence') {
+                const btn = document.getElementById('link-apparence');
+                if (btn) switchSection('apparence', btn);
+            }
+            lucide.createIcons();
+        });
+    </script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+</body>
+</html>

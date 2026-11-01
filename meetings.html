@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réunions & PV - TRIPA</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar__logo">
+            <i data-lucide="triangle"></i>
+            <span>TRIPA</span>
+        </div>
+        <nav class="sidebar__nav">
+                <a href="dashboard.html" class="sidebar__link ">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Tableau de bord</span>
+                </a>
+                <a href="members.html" class="sidebar__link ">
+                    <i data-lucide="users"></i>
+                    <span>Membres</span>
+                </a>
+                <a href="finances.html" class="sidebar__link ">
+                    <i data-lucide="wallet"></i>
+                    <span>Finances</span>
+                </a>
+                <a href="meetings.html" class="sidebar__link sidebar__link--active">
+                    <i data-lucide="calendar"></i>
+                    <span>Réunions</span>
+                </a>
+                <a href="events.html" class="sidebar__link ">
+                    <i data-lucide="calendar-days"></i>
+                    <span>Événements</span>
+                </a>
+                <a href="votes.html" class="sidebar__link ">
+                    <i data-lucide="vote"></i>
+                    <span>Votes</span>
+                </a>
+                
+                <div class="sidebar__section-label">Outils</div>
+                
+                <a href="messages.html" class="sidebar__link ">
+                    <i data-lucide="message-square"></i>
+                    <span>Messagerie</span>
+                </a>
+                <a href="documents.html" class="sidebar__link ">
+                    <i data-lucide="folder"></i>
+                    <span>Documents</span>
+                </a>
+                <a href="projects.html" class="sidebar__link ">
+                    <i data-lucide="kanban"></i>
+                    <span>Projets</span>
+                </a>
+                
+                <div style="flex:1"></div>
+                
+                <a href="settings.html" class="sidebar__link ">
+                    <i data-lucide="settings"></i>
+                    <span>Paramètres</span>
+                </a>
+            </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="flex items-center gap-4">
+                <button class="btn btn--ghost lg-hidden" id="sidebarToggle">
+                    <i data-lucide="menu"></i>
+                </button>
+                <h2 class="header__title">Réunions</h2>
+            </div>
+            <div class="header__right" id="headerActions"></div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content animate-fade-in">
+            <div class="page-header flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold">Réunions & Procès-Verbaux</h1>
+                    <p class="text-muted mt-1">Gérez vos réunions, ordres du jour et PV</p>
+                </div>
+                <button class="btn btn--primary" data-open-modal="addMeetingModal">
+                    <i data-lucide="plus"></i> Nouvelle Réunion
+                </button>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="flex justify-between items-center mb-6 gap-4 flex-wrap stagger-1">
+                <p class="text-muted" id="meetingsCount">—</p>
+                <div class="flex gap-4 items-center flex-wrap">
+                    <div class="search-bar">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="searchInput" class="form-input" placeholder="Rechercher une réunion...">
+                    </div>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="">Toutes</option>
+                        <option value="AG">AG</option>
+                        <option value="CA">CA</option>
+                        <option value="Bureau">Bureau</option>
+                        <option value="ordinaire">Réunion ordinaire</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Meetings Grid -->
+            <div class="meetings-grid grid grid-2 gap-6 stagger-2" id="meetingsGrid"></div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="addMeetingModal">
+        <div class="modal card w-full max-w-lg">
+            <div class="card__header flex justify-between items-center">
+                <h2 class="text-lg font-bold">Nouvelle Réunion</h2>
+                <button class="btn btn--ghost p-1" data-close-modal="addMeetingModal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="card__body">
+                <form id="meetingForm" class="flex flex-col gap-4">
+                    <div class="form-group">
+                        <label class="form-label">Titre</label>
+                        <input type="text" id="mtTitle" class="form-input w-full" placeholder="Ex: Réunion mensuelle" required>
+                    </div>
+                    <div class="grid grid-2 gap-4">
+                        <div class="form-group">
+                            <label class="form-label">Type</label>
+                            <select id="mtCategory" class="form-select w-full">
+                                <option value="AG">AG</option>
+                                <option value="CA">CA</option>
+                                <option value="Bureau">Bureau</option>
+                                <option value="ordinaire">Réunion ordinaire</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Date et heure</label>
+                            <input type="datetime-local" id="mtStart" class="form-input w-full">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Lieu</label>
+                        <input type="text" id="mtLocation" class="form-input w-full" placeholder="Adresse ou lien visio">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ordre du jour</label>
+                        <textarea id="mtAgenda" class="form-input w-full" rows="4" placeholder="Points à aborder..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="card__footer flex justify-end gap-3 mt-4">
+                <button class="btn btn--ghost" data-close-modal="addMeetingModal">Annuler</button>
+                <button class="btn btn--primary" type="submit" form="meetingForm">Créer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/meetings.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

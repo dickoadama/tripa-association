@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIPA - Gestion des Membres</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/app.css">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar__logo">
+                <i data-lucide="users"></i>
+                <span>TRIPA</span>
+            </div>
+            
+            <nav class="sidebar__nav">
+                <a href="dashboard.html" class="sidebar__link ">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Tableau de bord</span>
+                </a>
+                <a href="members.html" class="sidebar__link sidebar__link--active">
+                    <i data-lucide="users"></i>
+                    <span>Membres</span>
+                </a>
+                <a href="finances.html" class="sidebar__link ">
+                    <i data-lucide="wallet"></i>
+                    <span>Finances</span>
+                </a>
+                <a href="meetings.html" class="sidebar__link ">
+                    <i data-lucide="calendar"></i>
+                    <span>Réunions</span>
+                </a>
+                <a href="events.html" class="sidebar__link ">
+                    <i data-lucide="calendar-days"></i>
+                    <span>Événements</span>
+                </a>
+                <a href="votes.html" class="sidebar__link ">
+                    <i data-lucide="vote"></i>
+                    <span>Votes</span>
+                </a>
+                
+                <div class="sidebar__section-label">Outils</div>
+                
+                <a href="messages.html" class="sidebar__link ">
+                    <i data-lucide="message-square"></i>
+                    <span>Messagerie</span>
+                </a>
+                <a href="documents.html" class="sidebar__link ">
+                    <i data-lucide="folder"></i>
+                    <span>Documents</span>
+                </a>
+                <a href="projects.html" class="sidebar__link ">
+                    <i data-lucide="kanban"></i>
+                    <span>Projets</span>
+                </a>
+                
+                <div style="flex:1"></div>
+                
+                <a href="settings.html" class="sidebar__link ">
+                    <i data-lucide="settings"></i>
+                    <span>Paramètres</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="flex items-center gap-4">
+                    <button class="btn btn--ghost mobile-only" id="sidebarToggle">
+                        <i data-lucide="menu"></i>
+                    </button>
+                    <h2>Membres</h2>
+                </div>
+                
+                <div class="header__right" id="headerActions"></div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <div class="page-header animate-fade-in">
+                    <div>
+                        <h1>Gestion des Membres</h1>
+                        <p class="text-muted" id="membersCount">—</p>
+                    </div>
+                    <button class="btn btn--primary" data-open-modal="addMemberModal">
+                        <i data-lucide="plus"></i>
+                        <span>Nouveau Membre</span>
+                    </button>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="card animate-fade-in stagger-1 mb-6">
+                    <div class="card__body flex justify-between items-center flex-wrap gap-4">
+                        <div class="search-bar flex-1" style="min-width: 250px;">
+                            <i data-lucide="search" class="text-muted"></i>
+                            <input type="text" id="searchInput" class="form-input" placeholder="Rechercher un membre...">
+                        </div>
+                        
+                        <div class="flex gap-4 items-center flex-wrap">
+                            <select class="form-select" id="roleFilter">
+                                <option value="">Tous les rôles</option>
+                            </select>
+                            
+                            <select class="form-select" id="statusFilter">
+                                <option value="">Tous les statuts</option>
+                                <option value="actif">Actif</option>
+                                <option value="inactif">Inactif</option>
+                                <option value="suspendu">Suspendu</option>
+                            </select>
+                            
+                            <div class="flex gap-2">
+                                <button class="btn btn--ghost btn--icon active">
+                                    <i data-lucide="layout-grid"></i>
+                                </button>
+                                <button class="btn btn--ghost btn--icon">
+                                    <i data-lucide="list"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members Grid — rendu dynamiquement par js/members.js -->
+                <div class="members-grid grid grid-4 gap-6 animate-fade-in stagger-2" id="membersGrid"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div class="modal-overlay" id="addMemberModal">
+        <div class="modal">
+            <div class="modal__header flex justify-between items-center mb-4">
+                <h3>Ajouter un Membre</h3>
+                <button class="btn btn--ghost btn--icon" data-close-modal="addMemberModal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal__body">
+                <form id="memberForm" class="flex flex-col gap-4">
+                    <div class="flex gap-4">
+                        <div class="form-group flex-1">
+                            <label class="form-label">Prénom</label>
+                            <input type="text" id="memberFirstname" class="form-input" placeholder="Prénom" required>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label class="form-label">Nom</label>
+                            <input type="text" id="memberLastname" class="form-input" placeholder="Nom" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="memberEmail" class="form-input" placeholder="email@exemple.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Téléphone</label>
+                        <input type="tel" id="memberPhone" class="form-input" placeholder="+223 XX XX XX XX">
+                    </div>
+                    <div class="form-group">
+                        <div class="flex justify-between items-center" style="margin-bottom: 0.25rem;">
+                            <label class="form-label" style="margin:0;">Rôle</label>
+                            <button type="button" class="btn btn--ghost btn--sm text-xs" data-open-modal="createRoleModal">
+                                <i data-lucide="plus" class="icon-sm"></i> Créer un rôle
+                            </button>
+                        </div>
+                        <select id="memberRole" class="form-select">
+                            <option value="membre">Membre Actif</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Statut</label>
+                        <select id="memberStatus" class="form-select">
+                            <option value="actif">Actif</option>
+                            <option value="inactif">Inactif</option>
+                            <option value="suspendu">Suspendu</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal__footer flex justify-end gap-3 mt-6">
+                <button class="btn btn--ghost" data-close-modal="addMemberModal">Annuler</button>
+                <button class="btn btn--primary" type="submit" form="memberForm">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Créer un rôle personnalisé -->
+    <div class="modal-overlay" id="createRoleModal">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal__header flex justify-between items-center mb-4">
+                <h3>Créer un rôle personnalisé</h3>
+                <button class="btn btn--ghost btn--icon" data-close-modal="createRoleModal">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal__body">
+                <form id="customRoleForm" class="flex flex-col gap-4">
+                    <div class="form-group">
+                        <label class="form-label">Nom du rôle</label>
+                        <input type="text" id="customRoleLabel" class="form-input" placeholder="Ex : Responsable Sécurité" required maxlength="40">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Couleur du badge</label>
+                        <select id="customRoleColor" class="form-select">
+                            <option value="ghost">Gris</option>
+                            <option value="primary">Accent (Or)</option>
+                            <option value="secondary">Indigo</option>
+                            <option value="success">Vert</option>
+                            <option value="info">Bleu</option>
+                            <option value="warning">Ambre</option>
+                            <option value="danger">Rouge</option>
+                        </select>
+                    </div>
+                    <p class="text-xs text-muted">ℹ️ Le rôle sera disponible immédiatement dans les listes déroulantes « Rôle » de vos membres (enregistré sur cet appareil).</p>
+                </form>
+            </div>
+            <div class="modal__footer flex justify-end gap-3 mt-6">
+                <button class="btn btn--ghost" data-close-modal="createRoleModal">Annuler</button>
+                <button class="btn btn--primary" type="submit" form="customRoleForm">Créer le rôle</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/members.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

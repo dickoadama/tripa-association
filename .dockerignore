@@ -1,0 +1,11 @@
+node_modules
+server/node_modules
+server/tripa.db
+server/tripa.db-wal
+server/tripa.db-shm
+.git
+.qoder
+*.log
+Dockerfile
+.dockerignore
+fly.toml

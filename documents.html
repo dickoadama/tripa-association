@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIPA - Documents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar__logo">
+                <i data-lucide="users"></i><span>TRIPA</span>
+            </div>
+            <nav class="sidebar__nav">
+                <a href="dashboard.html" class="sidebar__link"><i data-lucide="layout-dashboard"></i><span>Tableau de bord</span></a>
+                <a href="members.html" class="sidebar__link"><i data-lucide="users"></i><span>Membres</span></a>
+                <a href="finances.html" class="sidebar__link"><i data-lucide="wallet"></i><span>Finances</span></a>
+                <a href="meetings.html" class="sidebar__link"><i data-lucide="calendar"></i><span>Réunions</span></a>
+                <a href="events.html" class="sidebar__link"><i data-lucide="calendar-days"></i><span>Événements</span></a>
+                <a href="votes.html" class="sidebar__link"><i data-lucide="vote"></i><span>Votes</span></a>
+                <div class="sidebar__section-label">Outils</div>
+                <a href="messages.html" class="sidebar__link"><i data-lucide="message-square"></i><span>Messagerie</span></a>
+                <a href="documents.html" class="sidebar__link sidebar__link--active"><i data-lucide="folder"></i><span>Documents</span></a>
+                <a href="projects.html" class="sidebar__link"><i data-lucide="kanban"></i><span>Projets</span></a>
+                <div style="flex:1"></div>
+                <a href="settings.html" class="sidebar__link"><i data-lucide="settings"></i><span>Paramètres</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="flex items-center gap-4">
+                    <button class="btn btn--ghost mobile-only" id="hamburgerBtn"><i data-lucide="menu"></i></button>
+                    <h2>Documents</h2>
+                </div>
+                <div class="header__right" id="headerActions"></div>
+            </header>
+
+            <div class="page-content">
+                <div class="page-header animate-fade-in">
+                    <div>
+                        <h1>Gestion Documentaire</h1>
+                        <p class="text-muted">Archives, statuts et fichiers de l'assemblée</p>
+                    </div>
+                    <button class="btn btn--primary" data-open-modal="addDocModal">
+                        <i data-lucide="upload"></i>
+                        <span>Ajouter un fichier</span>
+                    </button>
+                </div>
+
+                <div class="toolbar animate-fade-in stagger-1">
+                    <div class="toolbar__left">
+                        <p class="text-muted" id="docsCount">—</p>
+                    </div>
+                    <div class="toolbar__right">
+                        <div class="search-bar">
+                            <i data-lucide="search" class="search-bar__icon"></i>
+                            <input type="text" id="searchInput" class="search-bar__input" placeholder="Rechercher un document...">
+                        </div>
+                        <select class="form-select" id="formatFilter">
+                            <option value="">Tous les formats</option>
+                            <option value="pdf">PDF</option>
+                            <option value="doc">Word / Docs</option>
+                            <option value="img">Images</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h3 class="mt-6 mb-4 font-600 animate-fade-in stagger-2">Dossiers</h3>
+                <div class="grid grid-4 gap-4 animate-fade-in stagger-2" id="foldersGrid"></div>
+
+                <h3 class="mt-8 mb-4 font-600 animate-fade-in stagger-3">Fichiers Récents</h3>
+                <div class="card animate-fade-in stagger-3">
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nom du fichier</th>
+                                    <th>Format</th>
+                                    <th>Taille</th>
+                                    <th>Date d'ajout</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="docsTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Doc Modal -->
+    <div class="modal-overlay" id="addDocModal">
+        <div class="modal">
+            <div class="modal__header">
+                <h3 class="modal__title">Ajouter un Document</h3>
+                <button class="btn btn--icon btn--ghost" data-close-modal="addDocModal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal__body">
+                <form id="docForm">
+                    <div class="form-group">
+                        <label class="form-label form-label--required">Nom du document</label>
+                        <input type="text" id="docName" class="form-input" placeholder="Titre...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Dossier de destination</label>
+                        <select id="docCategory" class="form-select">
+                            <option>Statuts & Règlements</option>
+                            <option>Bilans Financiers</option>
+                            <option>PV de Réunions</option>
+                            <option>Photos Événements</option>
+                            <option>Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fichier (facultatif)</label>
+                        <input type="file" id="docFile" class="form-input">
+                        <p class="text-xs text-muted mt-2">Le nom et la taille sont repris du fichier sélectionné.</p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal__footer">
+                <button class="btn btn--ghost" data-close-modal="addDocModal">Annuler</button>
+                <button class="btn btn--primary" type="submit" form="docForm">Ajouter</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="sidebar-overlay"></div>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/documents.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

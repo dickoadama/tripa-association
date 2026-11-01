@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIPA - Connexion</title>
+    <meta name="description" content="Connectez-vous à TRIPA pour gérer votre assemblée.">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/app.css">
+    <style>
+        /* Auth specific inline styles for layout if not yet in pages.css */
+        .auth-layout {
+            display: flex;
+            min-height: 100vh;
+            background-color: var(--bg-main, #121212);
+        }
+        .auth-left {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .auth-right {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-card, #1e1e1e);
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+        }
+        @media (max-width: 768px) {
+            .auth-right {
+                display: none;
+            }
+        }
+        .auth-form-container {
+            width: 100%;
+            max-width: 400px;
+        }
+        .brand {
+            margin-bottom: 2rem;
+        }
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-main, #ffffff);
+        }
+        .features-list li {
+            font-size: 1.125rem;
+        }
+        .features-list i {
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-layout">
+        <div class="auth-left">
+            <div class="auth-form-container animate-fade-in">
+                <div class="brand flex items-center gap-2 stagger-1">
+                    <div class="logo-icon text-accent">
+                        <i data-lucide="triangle" fill="currentColor"></i>
+                    </div>
+                    <span class="logo-text text-accent" style="font-weight: 700; font-size: 1.5rem;">TRIPA</span>
+                </div>
+                
+                <h1 class="page-title stagger-2">Bienvenue sur TRIPA</h1>
+                <p class="text-muted stagger-2" style="margin-bottom: 2rem;">Connectez-vous pour gérer votre assemblée</p>
+                
+                <form id="login-form" class="stagger-3">
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="email" class="form-label" style="display: block; margin-bottom: 0.5rem; color: var(--text-main, #fff);">Email</label>
+                        <input type="email" id="email" class="form-input" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color, #333); background: var(--bg-card, #1e1e1e); color: white;" required placeholder="votre@email.com">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <div class="flex justify-between items-center" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <label for="password" class="form-label" style="color: var(--text-main, #fff);">Mot de passe</label>
+                            <a href="#" class="text-accent" style="font-size: 0.875rem; text-decoration: none; color: var(--accent, #f59e0b);">Mot de passe oublié?</a>
+                        </div>
+                        <div class="password-input-wrapper" style="position: relative;">
+                            <input type="password" id="password" class="form-input" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color, #333); background: var(--bg-card, #1e1e1e); color: white; padding-right: 2.5rem;" required placeholder="••••••••">
+                            <button type="button" class="btn-toggle-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted, #9ca3af);">
+                                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group flex items-center gap-2" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="remember" style="accent-color: var(--accent, #f59e0b);">
+                        <label for="remember" style="font-size: 0.875rem; color: var(--text-muted, #9ca3af); cursor: pointer;">Se souvenir de moi</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn--primary" style="width: 100%; padding: 0.75rem; background: var(--accent, #f59e0b); color: #000; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">Se connecter</button>
+                </form>
+                
+                <div class="auth-footer stagger-4" style="margin-top: 2rem; text-align: center; color: var(--text-muted, #9ca3af);">
+                    <p>Pas encore de compte? <a href="register.html" class="text-accent" style="color: var(--accent, #f59e0b); text-decoration: none; font-weight: 500;">S'inscrire</a></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="auth-right">
+            <div class="auth-feature-box animate-fade-in" style="max-width: 450px; z-index: 1;">
+                <div style="margin-bottom: 1.5rem; color: var(--accent, #f59e0b);">
+                    <i data-lucide="users" style="width: 48px; height: 48px;"></i>
+                </div>
+                <h2 style="font-size: 2.25rem; margin-bottom: 1.5rem; line-height: 1.2; font-weight: 700; color: var(--text-main, #fff);">Gérez votre assemblée efficacement</h2>
+                <ul class="features-list" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 1.25rem; color: var(--text-muted, #9ca3af);">
+                    <li style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="check-circle" style="color: var(--accent, #f59e0b);"></i>
+                        <span>Gestion des membres</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="check-circle" style="color: var(--accent, #f59e0b);"></i>
+                        <span>Suivi des cotisations</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="check-circle" style="color: var(--accent, #f59e0b);"></i>
+                        <span>Votes en temps réel</span>
+                    </li>
+                    <li style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="check-circle" style="color: var(--accent, #f59e0b);"></i>
+                        <span>Procès-verbaux</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
