@@ -1,0 +1,59 @@
+# TRIPA — Auto-hébergement avec HTTPS/TLS automatique (Caddy en reverse proxy).
+# Usage :
+#   1) cp .env.example .env      puis renseigner JWT_SECRET et DOMAIN
+#        DOMAIN=tripa.mondomaine.com   → certificat Let's Encrypt automatique
+#        DOMAIN=localhost              → certificat interne self-signed (test)
+#   2) docker compose -f docker-compose.https.yml up -d --build
+# TRIPA n'expose AUCUN port public : il n'est joignable que via Caddy (80/443).
+services:
+  tripa:
+    build: .
+    image: tripa:latest
+    container_name: tripa
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 10000
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET obligatoire, a definir dans .env}"
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@tripa.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-tripa-super-2026}
+      TURSO_DATABASE_URL: ${TURSO_DATABASE_URL:-}
+      TURSO_AUTH_TOKEN: ${TURSO_AUTH_TOKEN:-}
+      COOKIE_SECURE: "true"          # site servi en HTTPS
+    volumes:
+      - tripa-data:/app/server/data
+    networks:
+      - tripa-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:10000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: tripa-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - tripa
+    networks:
+      - tripa-net
+
+volumes:
+  tripa-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  tripa-net:
+    driver: bridge

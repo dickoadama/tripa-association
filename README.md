@@ -10,6 +10,7 @@ Le frontend est **100 % autonome** : aucune dépendance externe (icônes et grap
 - [Environnement et variables](#environnement-et-variables)
 - [Démarrage local (sans Docker)](#démarrage-local-sans-docker)
 - [Auto-hébergement avec Docker](#auto-hébergement-avec-docker)
+- [HTTPS/TLS en une commande (Caddy)](#httpstls-en-une-commande-caddy)
 - [Reverse proxy & HTTPS](#reverse-proxy--https)
 - [Déploiement managé (Render)](#déploiement-managé-render)
 - [Rôles et comptes](#rôles-et-comptes)
@@ -100,6 +101,21 @@ docker volume ls                  # volume « tripa_data » = base SQLite
 ```
 
 Les **données survivent** aux redémarrages (volume `tripa-data` monté sur `/app/server/data`). Pour utiliser **Turso** à la place, renseignez `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` dans `.env`.
+
+## HTTPS/TLS en une commande (Caddy)
+`docker-compose.https.yml` ajoute **Caddy** comme reverse proxy devant TRIPA : **TLS automatique** (Let's Encrypt en production, certificat interne pour `localhost`), HTTP→HTTPS, en-têtes de sécurité. TRIPA **n'expose aucun port public** (seuls 80/443 de Caddy sortent), et le cookie passe en `COOKIE_SECURE=true`.
+
+```bash
+cp .env.example .env
+#   → renseignez JWT_SECRET et DOMAIN
+#     DOMAIN=tripa.mondomaine.com  (public, ports 80/443 ouverts → Let's Encrypt)
+#     DOMAIN=localhost             (test local en HTTPS, certificat self-signed)
+
+docker compose -f docker-compose.https.yml up -d --build
+```
+Puis `https://<DOMAIN>`. Les certificats et la config Caddy sont persistés dans les volumes `caddy-data` / `caddy-config`. Le fichier `Caddyfile` fourni est à adapter si vous avez des besoins avancés (multiple domaines, wildcards, DNS challenge…).
+
+> **DNS challenge (option)** : si TRIPA n'est pas joignable sur le port 80 (derrière un NAT), remplacez le bloc site du `Caddyfile` par `{$DOMAIN} { tls { dns cloudflare {env.CLOUDFLARE_API_TOKEN} } reverse_proxy tripa:10000 }` et exposez ce jeton à Caddy.
 
 ## Reverse proxy & HTTPS
 En production exposée sur Internet, placez TRIPA derrière un reverse proxy TLS (Caddy, Nginx, Traefik) et passez `COOKIE_SECURE=true`.

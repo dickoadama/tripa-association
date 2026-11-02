@@ -1,0 +1,21 @@
+# TRIPA — reverse proxy Caddy (HTTPS automatique).
+# DOMAIN est fourni par docker-compose.https.yml (variable d'environnement).
+#   • DOMAIN = un vrai nom de domaine accessible sur le port 80/443
+#     → Caddy délivre et renew automatiquement un certificat Let's Encrypt.
+#   • DOMAIN = localhost (ou tout nom non public)
+#     → Caddy utilise un certificat interne « self-signed » automatique.
+{$DOMAIN:localhost} {
+	# Acheminement TLS obligatoire (HTTP → HTTPS géré nativement par Caddy).
+	encode zstd gzip
+
+	# En-têtes de sécurité de base.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "no-referrer-when-downgrade"
+		-Server
+	}
+
+	reverse_proxy tripa:10000
+}
