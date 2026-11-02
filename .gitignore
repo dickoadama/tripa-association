@@ -23,6 +23,7 @@ npm-debug.log*
 
 # Sauvegardes générées (scripts/backup.js)
 backups/
+offsite/
 
 # Captures d'écran (autorisées dans docs/screenshots uniquement)
 *.png

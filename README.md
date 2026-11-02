@@ -143,6 +143,17 @@ docker run --rm -v tripa_tripa-backups:/b -v "$PWD/backups:/out" alpine cp -r /b
 - **JSON** — (après `--decrypt` si chiffré) UI **Paramètres → Restauration** ou `POST /api/backup/restore` pour recharger les entités ; les comptes `users` du fichier servent en cas de perte totale (réimport SQL / reconstruction).
 - **SQLite** — déchiffrer le `.db.enc` puis remplacer `server/data/tripa.db` par le `.db` d'un lot arrêté (`docker compose down`, restaurer, `up`) : état intégral, comptes inclus.
 
+**Export hors-site (règle 3-2-1)** — deux étages cumulables :
+1. **Seconde copie** : `OFFSITE_DIR=/app/offsite` fait dupliquer chaque lot vers le volume `tripa-offsite` (autre disque/montage).
+2. **Cloud (optionnel)** : le service `offsite` (image **rclone**, profil dédié) synchronise le volume `tripa-backups` vers la destination `OFFSITE_DEST` (S3, Google Drive, SSH…). Éteint par défaut, il ne démarre qu'avec `--profile offsite` :
+
+```bash
+# Configurer le remote rclone une fois (écrit dans le volume rclone-config) :
+docker compose --profile offsite run --rm offsite rclone config
+# Renseigner OFFSITE_DEST="monremote:tripa-backups" dans .env, puis activer la synchro :
+docker compose --profile offsite up -d
+```
+
 > ⚠️ Les sauvegardes contiennent les données nominatives de l'association (et, par défaut, les empreintes de mots de passe). Conservez-elles **chiffrées / protégées** et n'exposez jamais le dossier `backups/` (ignoré par git et par l'image Docker).
 
 ## Reverse proxy & HTTPS

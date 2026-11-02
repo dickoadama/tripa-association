@@ -44,11 +44,35 @@ services:
       BACKUP_ENCRYPT: ${BACKUP_ENCRYPT:-false}
       BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
       BACKUP_PASSPHRASE_FILE: ${BACKUP_PASSPHRASE_FILE:-}
+      # Seconde copie locale (règle 3-2-1) : mettre /app/offsite pour dupliquer vers le volume tripa-offsite.
+      OFFSITE_DIR: ${OFFSITE_DIR:-}
     volumes:
       - tripa-data:/app/server/data
       - tripa-backups:/app/backups
+      - tripa-offsite:/app/offsite
     command: ["sh", "-c", "trap 'exit 0' TERM; while true; do node /app/scripts/backup.js; sleep ${BACKUP_INTERVAL:-21600}; done"]
+
+  # Synchro CLOUD optionnelle (règle 3-2-1). Activée par : docker compose --profile offsite up -d
+  # 1 configurer le remote une fois :  docker compose --profile offsite run --rm offsite rclone config
+  # 2 définir OFFSITE_DEST (ex. "monremote:tripa-backups") dans .env, puis relancer avec le profile.
+  offsite:
+    image: rclone/rclone:latest
+    container_name: tripa-offsite-sync
+    restart: unless-stopped
+    profiles: ["offsite"]
+    depends_on:
+      - tripa
+    environment:
+      RCLONE_CONFIG: /config/rclone.conf
+      OFFSITE_DEST: ${OFFSITE_DEST:-}
+      OFFSITE_INTERVAL: ${OFFSITE_INTERVAL:-21600}
+    volumes:
+      - tripa-backups:/backups:ro
+      - rclone-config:/config
+    command: ["sh", "-c", "trap 'exit 0' TERM; while true; do if [ -n \"$$OFFSITE_DEST\" ]; then rclone sync /backups \"$$OFFSITE_DEST\" -v; else echo 'OFFSITE_DEST non defini, sync ignoree'; fi; sleep \"$$OFFSITE_INTERVAL\"; done"]
 
 volumes:
   tripa-data:
   tripa-backups:
+  tripa-offsite:
+  rclone-config:

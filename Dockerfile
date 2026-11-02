@@ -20,7 +20,7 @@ RUN npm run build
 # 4) Dossiers base SQLite + sauvegardes (auto-hébergement) + utilisateur non-root.
 #    Pré-créer /app/backups avec le bon propriétaire : un volume Docker nommé, monté
 #    vide, hérite des droits de ce répertoire de l'image (sinon l'user node ne peut écrire).
-RUN mkdir -p /app/server/data /app/backups \
+RUN mkdir -p /app/server/data /app/backups /app/offsite \
  && addgroup -S node && adduser -S node -G node \
  && chown -R node:node /app
 USER node

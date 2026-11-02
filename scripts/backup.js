@@ -20,6 +20,7 @@ const OUT = process.env.BACKUP_DIR || path.join(__dirname, '..', 'backups');
 const KEEP = Math.max(1, parseInt(process.env.BACKUP_KEEP || '14', 10) || 14);
 const REDACT = process.env.BACKUP_REDACT_SECRETS === 'true';
 const ENCRYPT = process.env.BACKUP_ENCRYPT === 'true';
+const OFFSITE_DIR = process.env.OFFSITE_DIR || ''; // seconde copie hors du volume principal (règle 3-2-1)
 
 function getPassphrase() {
   let p = '';
@@ -55,7 +56,8 @@ function decryptBuffer(data, passphrase) {
 function stamp() { return new Date().toISOString().replace('T', '_').replace(/[:.]/g, '-').slice(0, 19); }
 
 function prune(dir) {
-  const files = fs.readdirSync(dir).filter(f => f.startsWith('tripa-backup-'));
+  let files = [];
+  try { files = fs.readdirSync(dir).filter(f => f.startsWith('tripa-backup-')); } catch (e) { return; }
   const stamps = [...new Set(files.map(f => f.replace(/^tripa-backup-/, '').replace(/\.(json|db)(\.enc)?$/, '')))].sort();
   const excess = stamps.length - KEEP;
   if (excess <= 0) return;
@@ -103,19 +105,32 @@ const { init, all, fromRow, ENTITIES, ENTITY_KEYS, client } = require('../server
   const pass = ENCRYPT ? getPassphrase() : null;
   fs.mkdirSync(OUT, { recursive: true });
   const base = path.join(OUT, 'tripa-backup-' + stamp());
+  const produced = [];
 
   const jsonBuf = Buffer.from(JSON.stringify(payload, null, 2));
-  if (ENCRYPT) { fs.writeFileSync(base + '.json.enc', encryptBuffer(jsonBuf, pass)); console.log('[backup] JSON chiffré : ' + base + '.json.enc (' + fs.statSync(base + '.json.enc').size + ' o)'); }
-  else { fs.writeFileSync(base + '.json', jsonBuf); console.log(`[backup] JSON : ${base}.json (${jsonBuf.length} o · ${payload.counts.users} comptes, ${ENTITY_KEYS.reduce((a, k) => a + entities[k].length, 0)} lignes)`); }
+  if (ENCRYPT) { fs.writeFileSync(base + '.json.enc', encryptBuffer(jsonBuf, pass)); produced.push(base + '.json.enc'); console.log('[backup] JSON chiffré : ' + base + '.json.enc (' + fs.statSync(base + '.json.enc').size + ' o)'); }
+  else { fs.writeFileSync(base + '.json', jsonBuf); produced.push(base + '.json'); console.log(`[backup] JSON : ${base}.json (${jsonBuf.length} o · ${payload.counts.users} comptes, ${ENTITY_KEYS.reduce((a, k) => a + entities[k].length, 0)} lignes)`); }
 
   if (!process.env.TURSO_DATABASE_URL) {
     try {
       await client.execute({ sql: 'VACUUM INTO ?', args: [base + '.db'] });
-      if (ENCRYPT) { fs.writeFileSync(base + '.db.enc', encryptBuffer(fs.readFileSync(base + '.db'), pass)); fs.unlinkSync(base + '.db'); console.log('[backup] SQLite chiffrée : ' + base + '.db.enc'); }
-      else console.log('[backup] SQLite : ' + base + '.db');
+      if (ENCRYPT) { fs.writeFileSync(base + '.db.enc', encryptBuffer(fs.readFileSync(base + '.db'), pass)); fs.unlinkSync(base + '.db'); produced.push(base + '.db.enc'); console.log('[backup] SQLite chiffrée : ' + base + '.db.enc'); }
+      else { produced.push(base + '.db'); console.log('[backup] SQLite : ' + base + '.db'); }
     } catch (e) { console.warn('[backup] capture binaire ignorée (' + (e && e.message ? e.message : e) + ')'); }
   }
 
   prune(OUT);
+
+  // Seconde copie « hors-site » locale (volume/dossier secondaire monté) : best-effort, non bloquante.
+  if (OFFSITE_DIR) {
+    try {
+      fs.mkdirSync(OFFSITE_DIR, { recursive: true });
+      for (const f of produced) fs.copyFileSync(f, path.join(OFFSITE_DIR, path.basename(f)));
+      prune(OFFSITE_DIR);
+      console.log('[backup] copie hors-site : ' + OFFSITE_DIR + ' (' + produced.length + ' fichier(s)).');
+    } catch (e) { console.warn('[backup] hors-site (OFFSITE_DIR) échoué : ' + (e && e.message ? e.message : e)); }
+  }
+
   console.log('[backup] terminé.');
+
 })().catch(e => { console.error('[backup] ÉCHEC : ' + (e && e.message ? e.message : e)); process.exit(1); });
