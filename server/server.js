@@ -11,10 +11,41 @@ const { DatabaseSync } = require('node:sqlite');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
+
+// Charge un éventuel fichier .env (server/.env ou racine du projet).
+// Le .env n'est JAMAIS commité — il stocke les secrets locaux.
+for (const envFile of [path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')]) {
+  try {
+    if (fs.existsSync(envFile)) {
+      for (const line of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+        const m = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/);
+        if (m && process.env[m[1]] === undefined) {
+          process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+        }
+      }
+      break;
+    }
+  } catch (e) { /* .env illisible : on continue avec les variables du système */ }
+}
+
+// ==========================================
+// Sécurité : le mot de passe du Super Admin ne figure PAS dans le code.
+// Sans SUPER_ADMIN_PWD défini (variable d'environnement ou .env),
+// le serveur REFUSE de démarrer.
+// ==========================================
+if (!process.env.SUPER_ADMIN_PWD) {
+  console.error('❌ TRIPA refuse de démarrer : SUPER_ADMIN_PWD n\'est pas défini.');
+  console.error('   Créez un fichier server/.env contenant :');
+  console.error('     SUPER_ADMIN_EMAIL=superadmin@tripa.com');
+  console.error('     SUPER_ADMIN_PWD=votre-mot-de-passe-fort');
+  console.error('   ... ou exportez ces variables avant de lancer le serveur.');
+  process.exit(1);
+}
 
 const PORT = process.env.PORT || 3000;
-const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'superadmin@tripa.com';
-const SUPER_ADMIN_DEFAULT_PWD = process.env.SUPER_ADMIN_PWD || 'SuperAdmin@2026';
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'superadmin@tripa.com').toLowerCase();
+const SUPER_ADMIN_DEFAULT_PWD = process.env.SUPER_ADMIN_PWD;
 // Chemin de la base — à pointer vers un disque persistant lors d'un déploiement en ligne
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'tripa.db');
 
@@ -139,7 +170,7 @@ if (!superExists) {
   db.prepare(`INSERT INTO users (id, email, password_hash, first_name, last_name, role, status)
               VALUES (?, ?, ?, 'Super', 'Admin', 'super_admin', 'active')`)
     .run(crypto.randomUUID(), SUPER_ADMIN_EMAIL, bcrypt.hashSync(SUPER_ADMIN_DEFAULT_PWD, 10));
-  console.log(`✅ Super Admin créé — email : ${SUPER_ADMIN_EMAIL} | mot de passe : ${SUPER_ADMIN_DEFAULT_PWD}`);
+  console.log(`✅ Super Admin créé — email : ${SUPER_ADMIN_EMAIL} (mot de passe : celui de SUPER_ADMIN_PWD)`);
   console.log('   ⚠️ Changez ce mot de passe après la première connexion.');
 }
 

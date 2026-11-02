@@ -1,0 +1,21 @@
+# TRIPA — Blueprint Render (plan gratuit, sans carte bancaire)
+# Frontend + API Express servis par le même conteneur Docker.
+services:
+  - type: web
+    name: tripa
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: frankfurt          # le plus proche de la France
+    healthCheckPath: /
+    envVars:
+      # Render n'a pas de montage /data → base SQLite dans /tmp
+      # (réinscriptible mais ÉPHÉMÈRE : les données sont remises à zéro au redéploiement)
+      - key: DB_PATH
+        value: /tmp/tripa.db
+      - key: SUPER_ADMIN_EMAIL
+        value: superadmin@tripa.com
+      # Secret à ne PAS commiter : saisir la valeur dans le dashboard Render
+      - key: SUPER_ADMIN_PWD
+        sync: false
