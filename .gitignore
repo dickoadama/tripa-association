@@ -3,8 +3,17 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
-# Dépendances (l'app est 100% statique, mais au cas où)
+# Dépendances Node
 node_modules/
+server/node_modules/
+
+# Build frontend (régénéré par `npm run build`)
+dist/
+
+# Base de données locale de dev + secrets
+server/data/
+.env
+.env.*
 
 # Logs
 *.log
@@ -13,3 +22,6 @@ npm-debug.log*
 # Captures d'écran (autorisées dans docs/screenshots uniquement)
 *.png
 !docs/screenshots/*.png
+
+curl cookie jar
+cj.txt

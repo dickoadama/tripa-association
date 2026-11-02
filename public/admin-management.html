@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRIPA</title>
+  <title>TRIPA — Console Super Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/app.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#4f46e5">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -18,15 +20,16 @@
       <main class="content" id="content"></main>
     </div>
   </div>
-  <div class="modal" id="formModal">
+  <div class="modal" id="adminModal">
     <div class="modal__box">
-      <div class="card__header"><h3 id="formTitle">Formulaire</h3>
-        <button class="btn btn--icon btn--ghost" onclick="closeModal('formModal')"><i data-lucide="x"></i></button></div>
-      <div class="card__body"><form id="entityForm"></form></div>
+      <div class="card__header"><h3 id="adminModalTitle">Compte</h3>
+        <button class="btn btn--icon btn--ghost" onclick="closeModal('adminModal')"><i data-lucide="x"></i></button></div>
+      <div class="card__body"><form id="adminForm"></form></div>
     </div>
   </div>
   <script src="js/api.js"></script>
   <script src="js/utils.js"></script>
-  <script src="js/entity.js"></script>
+  <script src="js/admin-management.js"></script>
+  <script src="js/pwa.js"></script>
 </body>
 </html>

@@ -1,0 +1,16 @@
+{
+  "name": "tripa",
+  "version": "3.0.0",
+  "private": true,
+  "description": "TRIPA — app backend Express + Turso. Build = minification du frontend.",
+  "scripts": {
+    "build": "node build.js",
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "engines": { "node": ">=18" },
+  "devDependencies": {
+    "clean-css": "^5.3.3",
+    "terser": "^5.36.0"
+  }
+}

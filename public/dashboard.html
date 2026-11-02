@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRIPA — Tableau de bord</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#4f46e5">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <aside id="sidebarHost"></aside>
+    <div>
+      <header id="topbarHost"></header>
+      <main class="content" id="content"></main>
+    </div>
+  </div>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    const PALETTE = { actif:'#16a34a', inactif:'#9ca3af', suspendu:'#dc2626', payee:'#16a34a',
+      en_attente:'#d97706', en_retard:'#dc2626', a_faire:'#9ca3af', en_cours:'#0284c7',
+      termine:'#16a34a', attente:'#d97706', conference:'#4f46e5', fete:'#a855f7', atelier:'#06b6d4',
+      sortie:'#f59e0b', autre:'#6b7280' };
+
+    function tally(rows, key){ const m={}; rows.forEach(r=>{ const v=(r[key]||'—'); m[v]=(m[v]||0)+1; }); return m; }
+    function doughnut(canvas, map){
+      const labels=Object.keys(map), data=labels.map(l=>map[l]);
+      new Chart(canvas,{ type:'doughnut', data:{ labels:labels.map(l=>humanize(l)),
+        datasets:[{ data, backgroundColor:labels.map(l=>PALETTE[l]||'#4f46e5'), borderWidth:0 }] },
+        options:{ plugins:{ legend:{ position:'bottom' } }, cutout:'62%' } });
+    }
+    function bars(canvas, map, color='#4f46e5'){
+      const labels=Object.keys(map), data=labels.map(l=>map[l]);
+      new Chart(canvas,{ type:'bar', data:{ labels:labels.map(l=>humanize(l)),
+        datasets:[{ data, backgroundColor:color, borderRadius:6 }] },
+        options:{ plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } } });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const profile = await requireAuth(['active']); if (!profile) return;
+      buildLayout('dashboard', 'Tableau de bord');
+      const content = document.getElementById('content');
+      content.innerHTML = '<div class="grid grid--4 mb-6" id="statGrid"></div>'+
+        '<div class="grid grid--2 mb-6"><div class="card"><div class="card__header"><h3>Adhérents par statut</h3></div><div class="card__body"><canvas id="cAdh"></canvas></div></div>'+
+        '<div class="card"><div class="card__header"><h3>Cotisations par statut</h3></div><div class="card__body"><canvas id="cCot"></canvas></div></div></div>'+
+        '<div class="grid grid--2 mb-6"><div class="card"><div class="card__header"><h3>Tâches par statut</h3></div><div class="card__body"><canvas id="cTach"></canvas></div></div>'+
+        '<div class="card"><div class="card__header"><h3>Événements par type</h3></div><div class="card__body"><canvas id="cEven"></canvas></div></div></div>'+
+        '<div class="card"><div class="card__header"><h3>Accès rapide</h3></div><div class="card__body"><div class="grid grid--3" id="quick"></div></div></div>';
+
+      const keys = ['adherents','cotisations','evenements','taches'];
+      const store = {};
+      for (const k of keys){ const { data } = await fetchAll(k, { limit: 5000 }); store[k] = data || []; }
+
+      const totalCot = store.cotisations.filter(c=>c.statut==='payee').reduce((s,c)=>s+(Number(c.montant)||0),0);
+      const stats = [
+        { k:'adherents', label:'Adhérents', val:store.adherents.length },
+        { k:'cotisations', label:'Cotisations', val:store.cotisations.length },
+        { k:'evenements', label:'Événements', val:store.evenements.length },
+        { k:'taches', label:'Tâches', val:store.taches.length }
+      ];
+      document.getElementById('statGrid').innerHTML = stats.map(s=>{
+        const schema=ENTITY_SCHEMA[s.k];
+        return `<div class="card card__body"><div class="row" style="gap:12px;"><i data-lucide="${schema.icon}" style="color:var(--accent)"></i>
+          <div><div style="font-size:26px;font-weight:600;">${s.val}</div><div class="muted">${s.label}</div></div></div></div>`; }).join('') +
+        `<div class="card card__body" style="grid-column:1/-1;"><span class="muted">Total encaissé (cotisations payées)</span>
+          <div style="font-size:24px;font-weight:600;color:var(--success);">${formatCurrency(totalCot)}</div></div>`;
+
+      if (window.Chart){
+        doughnut(document.getElementById('cAdh'), tally(store.adherents,'statut'));
+        doughnut(document.getElementById('cCot'), tally(store.cotisations,'statut'));
+        bars(document.getElementById('cTach'), tally(store.taches,'statut'), '#0284c7');
+        bars(document.getElementById('cEven'), tally(store.evenements,'type'), '#4f46e5');
+      }
+      document.getElementById('quick').innerHTML = Object.keys(ENTITY_SCHEMA).map(k=>{ const s=ENTITY_SCHEMA[k];
+        return `<a class="card card__body row" href="entity.html?t=${k}" style="gap:10px;"><i data-lucide="${s.icon}" style="color:var(--accent)"></i>${s.label}</a>`; }).join('');
+      lucide.createIcons();
+    });
+  </script>
+  <script src="js/pwa.js"></script>
+</body>
+</html>
