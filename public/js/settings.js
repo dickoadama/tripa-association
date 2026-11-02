@@ -59,7 +59,7 @@ function viewApparence(P) {
     `<span class="swatch${P.accent === k ? ' is-active' : ''}" data-accent="${k}" title="${esc(k)}" style="background:${hex};"></span>`).join('');
   return `<div class="card" style="max-width:640px;"><div class="card__header"><h3>Apparence</h3></div>
     <div class="card__body">
-      ${seg('Thème', 'theme', P.theme, [{ v: 'light', label: '☀️ Clair' }, { v: 'dark', label: '🌙 Sombre' }])}
+      ${seg('Thème', 'theme', P.theme, [{ v: 'light', label: '☀️ Clair' }, { v: 'dark', label: '🌙 Sombre' }, { v: 'auto', label: '🖥️ Auto (système)' }])}
       <div class="field"><label class="label">Couleur d'accent</label><div class="swatches" data-seg="accent">${sw}</div></div>
       ${seg('Densité', 'density', P.density, [{ v: 'comfortable', label: 'Confortable' }, { v: 'compact', label: 'Compacte' }])}
       <p class="muted" style="font-size:13px;">Les changements sont appliqués immédiatement et mémorisés dans ce navigateur.</p>
@@ -149,6 +149,7 @@ function wireSettings() {
       else patch[key] = val;
       TRIPA.PREFS.set(patch);
       group.querySelectorAll('[data-segval]').forEach(b => b.classList.toggle('seg-active', b === btn));
+      if (key === 'theme') { const tb = document.getElementById('themeBtn'); if (tb && typeof themeIcon === 'function') { tb.innerHTML = '<i data-lucide="' + themeIcon(patch.theme) + '"></i>'; if (window.lucide) lucide.createIcons(); } }
       showToast('Préférence enregistrée.', 'success', 1600);
       if (key === 'notifications') { /* cloche appliquée au prochain chargement */ }
     }));

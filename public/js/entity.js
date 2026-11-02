@@ -30,21 +30,24 @@ async function loadRefMaps(){
 function renderShell(schema){
   const content = document.getElementById('content');
   content.innerHTML = `
-    <div class="between wrap mb-6">
+    <div class="print-head" id="printHead">TRIPA — ${esc(schema.label)}</div>
+    <div class="between wrap mb-6 no-print">
       <input class="input" id="searchInput" placeholder="Rechercher..." style="max-width:320px;">
       <div class="row wrap">
         <button class="btn btn--ghost btn--sm" id="exportBtn"><i data-lucide="download"></i> Export CSV</button>
         <label class="btn btn--ghost btn--sm" style="cursor:pointer;"><i data-lucide="upload"></i> Import CSV
           <input type="file" id="importFile" accept=".csv" style="display:none;"></label>
+        <button class="btn btn--ghost btn--sm" id="printBtn"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn--primary" id="addBtn"><i data-lucide="plus"></i> Nouveau ${esc(schema.singular)}</button>
       </div>
     </div>
     <div id="offlineBanner"></div>
     <div class="card"><table class="table" id="dataTable"></table></div>
-    <div class="between mt-4"><span class="muted" id="pageInfo"></span>
+    <div class="between mt-4 no-print"><span class="muted" id="pageInfo"></span>
       <div class="row"><button class="btn btn--ghost btn--sm" id="prevBtn">← Précédent</button>
       <button class="btn btn--ghost btn--sm" id="nextBtn">Suivant →</button></div></div>`;
   document.getElementById('addBtn').addEventListener('click', () => openForm());
+  document.getElementById('printBtn').addEventListener('click', printView);
   let dt;
   document.getElementById('searchInput').addEventListener('input', e => {
     clearTimeout(dt); dt = setTimeout(() => { STATE.search = e.target.value.trim(); STATE.page = 1; loadData(); }, 300);
@@ -158,6 +161,20 @@ async function removeRow(id){
   const { error } = await deleteRow(ENTITY_TYPE, id);
   if (error) { showToast('Erreur : ' + error.message, 'danger'); return; }
   ROWS = ROWS.filter(r => r.id !== id); renderTable(); showToast('Élément supprimé.', 'success');
+}
+
+/* ---------- Impression / export PDF ---------- */
+async function printView(){
+  const head = document.getElementById('printHead');
+  const { data, error } = await fetchAll(ENTITY_TYPE, { limit: 5000, search: STATE.search, sort: STATE.sort, dir: STATE.dir });
+  if (error) { showToast('Erreur : ' + error.message, 'danger'); return; }
+  const prev = ROWS.slice();
+  ROWS = data || []; renderTable();
+  if (head) head.innerHTML = `TRIPA — ${esc(ENTITY_SCHEMA[ENTITY_TYPE].label)} <span class="muted" style="font-weight:400;font-size:13px;">· ${ROWS.length} élément(s) · ${formatDate(new Date())}</span>`;
+  const restore = () => { ROWS = prev; renderTable(); window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  window.print();
+  setTimeout(restore, 800);
 }
 
 /* ---------- Export / Import CSV ---------- */

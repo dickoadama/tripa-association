@@ -81,6 +81,9 @@ async function restoreBackup(entities){ return req('POST', '/backup/restore', { 
 /* ---------- Statistiques agrégées ---------- */
 async function fetchStats(){ return req('GET', '/stats'); }
 
+/* ---------- Journal d'activité ---------- */
+async function fetchActivity(limit = 100){ return req('GET', '/activity?limit=' + encodeURIComponent(limit)); }
+
 /* ---------- Gardes de session (côté client, le vrai contrôle est serveur) ---------- */
 async function requireAuth(allowed = ['active']) {
   const { data: profile, error } = await fetchCurrentUser();

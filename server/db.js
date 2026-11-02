@@ -55,6 +55,11 @@ async function init() {
       id TEXT PRIMARY KEY, admin_id TEXT NOT NULL, created_at TEXT NOT NULL, ${defs})`);
     await run(`CREATE INDEX IF NOT EXISTS idx_${key}_admin ON "${key}"(admin_id)`);
   }
+
+  await run(`CREATE TABLE IF NOT EXISTS activity_log (
+    id TEXT PRIMARY KEY, admin_id TEXT NOT NULL, action TEXT NOT NULL,
+    entity TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_activity_admin ON activity_log(admin_id)`);
 }
 
 module.exports = { client, all, get, run, init, toSqlArg, fromRow, ENTITIES, ENTITY_KEYS };

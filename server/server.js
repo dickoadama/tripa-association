@@ -27,6 +27,20 @@ const isAdmin = (u) => u && u.role === 'admin';
 
 function bad(res, code, message) { return res.status(code).json({ error: { message, status: code } }); }
 
+/* ---------- Journal d'activité (meilleur effort, jamais bloquant) ---------- */
+function labelFor(key, obj) {
+  const fields = ['libelle', 'titre', 'nom', 'prenom', 'fournisseur', 'periode'];
+  for (const f of fields) { if (obj && obj[f]) { const s = String(obj[f]).trim(); if (s) return s; } }
+  return key && ENTITIES[key] ? ENTITIES[key].label : '';
+}
+async function logActivity(req, action, key, obj) {
+  try {
+    const adminId = (req.user.role === 'super_admin' && obj && obj.admin_id) ? obj.admin_id : req.user.id;
+    await run('INSERT INTO activity_log (id, admin_id, action, entity, label, created_at) VALUES (?,?,?,?,?,?)',
+      [A.uuid(), adminId, action, key || '', String(labelFor(key, obj) || '').slice(0, 120), nowIso()]);
+  } catch (e) { /* ne jamais faire échouer l'opération principale */ }
+}
+
 /* ---------- Authentification ---------- */
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, nom, prenom, telephone, asso_type } = req.body || {};
@@ -137,6 +151,16 @@ app.get('/api/stats', A.requireUser, async (req, res) => {
   res.json({ data: { counts, tallies, total_encaisse: Number(tot ? tot.s : 0) }, error: null });
 });
 
+/* ---------- Journal d'activité ---------- */
+app.get('/api/activity', A.requireUser, async (req, res) => {
+  const isSuper = req.user.role === 'super_admin';
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const where = isSuper ? '' : ' WHERE admin_id = ?';
+  const args = isSuper ? [] : [req.user.id];
+  const rows = await all(`SELECT * FROM activity_log${where} ORDER BY created_at DESC LIMIT ${limit}`, args);
+  res.json({ data: rows, error: null });
+});
+
 /* ---------- CRUD générique des entités ---------- */
 function validEntity(res, key) { if (!ENTITIES[key]) { bad(res, 404, 'Entité inconnue.'); return false; } return true; }
 
@@ -178,6 +202,7 @@ app.post('/api/:entity', A.requireUser, async (req, res) => {
   const id = A.uuid();
   await run(`INSERT INTO "${key}" (id, admin_id, created_at, ${names.map(c => `"${c}"`).join(', ')}) VALUES (${Array(names.length + 3).fill('?').join(', ')})`,
     [id, adminId, nowIso(), ...values]);
+  await logActivity(req, 'create', key, { ...body, admin_id: adminId });
   res.json({ data: { id, admin_id: adminId, created_at: nowIso() }, error: null });
 });
 
@@ -193,6 +218,7 @@ app.put('/api/:entity/:id', A.requireUser, async (req, res) => {
   const scope = isSuper ? '' : ' AND admin_id = ?';
   if (!isSuper) args.push(req.user.id);
   await run(`UPDATE "${key}" SET ${sets} WHERE id = ?${scope}`, args);
+  await logActivity(req, 'update', key, body);
   res.json({ data: true, error: null });
 });
 
@@ -201,7 +227,9 @@ app.delete('/api/:entity/:id', A.requireUser, async (req, res) => {
   const isSuper = req.user.role === 'super_admin';
   const args = [req.params.id]; const scope = isSuper ? '' : ' AND admin_id = ?';
   if (!isSuper) args.push(req.user.id);
+  const existing = await get(`SELECT * FROM "${key}" WHERE id = ?${scope}`, args);
   await run(`DELETE FROM "${key}" WHERE id = ?${scope}`, args);
+  if (existing) await logActivity(req, 'delete', key, fromRow(existing, ENTITIES[key].cols));
   res.json({ data: true, error: null });
 });
 

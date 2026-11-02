@@ -104,6 +104,7 @@ const NAV = [
 ];
 const NAV_FOOT = [
   {key:'profile',label:'Mon profil',href:'profile.html',icon:'user-circle'},
+  {key:'activity',label:'Journal d’activité',href:'activity.html',icon:'history'},
   {key:'settings',label:'Réglages',href:'settings.html',icon:'settings'},
   {key:'help',label:'Aide & À propos',href:'help.html',icon:'help-circle'}
 ];
@@ -212,7 +213,7 @@ function buildLayout(activeKey,pageTitle){
           <input class="input" id="globalSearch" placeholder="Rechercher…" autocomplete="off"><kbd>Ctrl K</kbd></div>
         ${prefs.notifications?`<div class="relative"><button class="iconbtn" id="notifBtn" data-dd="notifMenu" title="Notifications"><i data-lucide="bell"></i><span class="dot"></span></button>
           <div class="dropdown" id="notifMenu"><div style="padding:8px 12px;font-weight:600;">Notifications</div><hr><div id="notifList"></div></div></div>`:''}
-        <button class="iconbtn" id="themeBtn" title="Thème"><i data-lucide="${prefs.theme==='dark'?'sun':'moon'}"></i></button>
+        <button class="iconbtn" id="themeBtn" title="Thème"><i data-lucide="${themeIcon(prefs.theme)}"></i></button>
         <div class="relative"><button class="iconbtn" data-dd="userMenu" title="Compte"><div class="avatar" style="width:28px;height:28px;font-size:12px;">${esc(initials)}</div></button>
           <div class="dropdown" id="userMenu"><div style="padding:8px 12px;"><div class="u-name">${nameHtml}</div><div class="muted" style="font-size:12px;">${emailHtml}</div></div><hr>
             <a href="profile.html"><i data-lucide="user-circle"></i> Mon profil</a>
@@ -236,7 +237,7 @@ function buildLayout(activeKey,pageTitle){
     if(gs) gs.addEventListener('keydown',e=>{ if(e.key==='Enter') runGlobalSearch(gs.value); });
     document.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); const s=document.getElementById('globalSearch'); if(s) s.focus(); } });
     const tb=document.getElementById('themeBtn');
-    if(tb) tb.addEventListener('click',()=>{ const p=TRIPA.PREFS.toggleTheme(); tb.innerHTML='<i data-lucide="'+(p.theme==='dark'?'sun':'moon')+'"></i>'; lucide.createIcons(); showToast('Thème '+(p.theme==='dark'?'sombre':'clair')+' activé.','info',1600); });
+    if(tb) tb.addEventListener('click',()=>{ const p=TRIPA.PREFS.cycleTheme(); tb.innerHTML='<i data-lucide="'+themeIcon(p.theme)+'"></i>'; lucide.createIcons(); showToast('Thème : '+({light:'clair',dark:'sombre',auto:'auto (système)'})[p.theme]+'.','info',1600); });
     const nb=document.getElementById('notifBtn');
     if(nb) nb.addEventListener('click',()=>loadNotifications());
   }
@@ -245,6 +246,7 @@ function buildLayout(activeKey,pageTitle){
   wireDropdowns(); attachRipple(); attachReveal();
 }
 function navLink(n,activeKey){ return `<a class="nav-link${n.key===activeKey?' is-active':''}" href="${n.href}"><i data-lucide="${n.icon}"></i><span>${n.label}</span></a>`; }
+function themeIcon(t){ return t==='dark'?'sun':t==='auto'?'monitor':'moon'; }
 
 /* Indicateur réseau (pied de page) */
 window.addEventListener('online',()=>{ const d=document.getElementById('netDot'); if(d){d.classList.remove('off');document.getElementById('netTxt').textContent='En ligne';} });
