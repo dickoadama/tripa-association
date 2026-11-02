@@ -123,17 +123,25 @@ Puis `https://<DOMAIN>`. Les certificats et la config Caddy sont persistés dans
 
 **Automatique** : les fichiers `docker-compose*.yml` incluent un service `backup` qui lance une sauvegarde au démarrage puis toutes les `BACKUP_INTERVAL` secondes (6 h par défaut), dans le volume `tripa-backups`. La **rétention** garde les `BACKUP_KEEP` lots les plus récents (`BACKUP_REDACT_SECRETS=true` pour ne pas consigner les empreintes de mots de passe).
 
+**Chiffrement au repos** : avec `BACKUP_ENCRYPT=true` + `BACKUP_PASSPHRASE` (ou `BACKUP_PASSPHRASE_FILE`, secret Docker monté), chaque lot est écrit en **AES-256-GCM** (`.json.enc` / `.db.enc` ; clé dérivée par scrypt, sel + IV aléatoires par fichier, aucun clair conservé). ⚠️ **Sans la passphrase, les sauvegardes sont irrécupérables** — conservez-la séparément, hors du serveur.
+
 ```bash
 # Ponctuel, en local (écrit dans ./backups) :
 npm run backup
 
-# Lister / récupérer les sauvegardes du volume Docker :
+# Chiffrer (exemple) :
+BACKUP_ENCRYPT=true BACKUP_PASSPHRASE='«une-passphrase-longue»' npm run backup
+
+# Déchiffrer un lot pour le restaurer :
+node scripts/backup.js --decrypt backups/tripa-backup-....json.enc backups/restored.json
+
+# Récupérer les sauvegardes du volume Docker vers ./backups :
 docker run --rm -v tripa_tripa-backups:/b -v "$PWD/backups:/out" alpine cp -r /b/. /out/
 ```
 
 **Restauration** :
-- **JSON** — UI **Paramètres → Restauration** (ou `POST /api/backup/restore`) pour recharger les entités ; les comptes `users` du fichier servent en cas de perte totale (réimport SQL / reconstruction).
-- **SQLite** — remplacer `server/data/tripa.db` par le `.db` d'un lot arrêté (`docker compose down`, restaurer, `up`) redonne l'état intégral, comptes inclus.
+- **JSON** — (après `--decrypt` si chiffré) UI **Paramètres → Restauration** ou `POST /api/backup/restore` pour recharger les entités ; les comptes `users` du fichier servent en cas de perte totale (réimport SQL / reconstruction).
+- **SQLite** — déchiffrer le `.db.enc` puis remplacer `server/data/tripa.db` par le `.db` d'un lot arrêté (`docker compose down`, restaurer, `up`) : état intégral, comptes inclus.
 
 > ⚠️ Les sauvegardes contiennent les données nominatives de l'association (et, par défaut, les empreintes de mots de passe). Conservez-elles **chiffrées / protégées** et n'exposez jamais le dossier `backups/` (ignoré par git et par l'image Docker).
 

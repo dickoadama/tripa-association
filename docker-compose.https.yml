@@ -63,6 +63,9 @@ services:
       BACKUP_DIR: /app/backups
       BACKUP_KEEP: ${BACKUP_KEEP:-14}
       BACKUP_REDACT_SECRETS: ${BACKUP_REDACT_SECRETS:-false}
+      BACKUP_ENCRYPT: ${BACKUP_ENCRYPT:-false}
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      BACKUP_PASSPHRASE_FILE: ${BACKUP_PASSPHRASE_FILE:-}
     volumes:
       - tripa-data:/app/server/data
       - tripa-backups:/app/backups
