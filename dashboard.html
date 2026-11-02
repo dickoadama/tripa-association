@@ -1,350 +1,42 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - TRIPA</title>
-    
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- CSS files in order -->
-    <link rel="stylesheet" href="css/app.css">
-
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRIPA — Tableau de bord</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-    <div class="app-layout">
-        
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar__logo">
-                <i data-lucide="users"></i>
-                <span>TRIPA</span>
-            </div>
-            
-            <nav class="sidebar__nav">
-                <a href="dashboard.html" class="sidebar__link sidebar__link--active">
-                    <i data-lucide="layout-dashboard"></i>
-                    <span>Tableau de bord</span>
-                </a>
-                <a href="members.html" class="sidebar__link ">
-                    <i data-lucide="users"></i>
-                    <span>Membres</span>
-                </a>
-                <a href="finances.html" class="sidebar__link ">
-                    <i data-lucide="wallet"></i>
-                    <span>Finances</span>
-                </a>
-                <a href="meetings.html" class="sidebar__link ">
-                    <i data-lucide="calendar"></i>
-                    <span>Réunions</span>
-                </a>
-                <a href="events.html" class="sidebar__link ">
-                    <i data-lucide="calendar-days"></i>
-                    <span>Événements</span>
-                </a>
-                <a href="votes.html" class="sidebar__link ">
-                    <i data-lucide="vote"></i>
-                    <span>Votes</span>
-                </a>
-                
-                <div class="sidebar__section-label">Outils</div>
-                
-                <a href="messages.html" class="sidebar__link ">
-                    <i data-lucide="message-square"></i>
-                    <span>Messagerie</span>
-                </a>
-                <a href="documents.html" class="sidebar__link ">
-                    <i data-lucide="folder"></i>
-                    <span>Documents</span>
-                </a>
-                <a href="projects.html" class="sidebar__link ">
-                    <i data-lucide="kanban"></i>
-                    <span>Projets</span>
-                </a>
-                
-                <div style="flex:1"></div>
-                
-                <a href="settings.html" class="sidebar__link ">
-                    <i data-lucide="settings"></i>
-                    <span>Paramètres</span>
-                </a>
-            </nav>
-
-            <div class="sidebar__user" style="margin-top: auto; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; border-top: 1px solid var(--border-color);">
-                <div class="avatar" style="background-color: var(--primary-color); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600;">AD</div>
-                <div class="user-info" style="display: flex; flex-direction: column;">
-                    <span style="font-weight: 600; font-size: 0.875rem;">Admin TRIPA</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Président</span>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Sidebar overlay for mobile -->
-        <div class="modal-overlay" id="sidebar-overlay" style="display: none; z-index: 40;"></div>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="header flex justify-between items-center" style="padding: 1rem 2rem; border-bottom: 1px solid var(--border-color); background-color: var(--card-bg);">
-                <div class="flex items-center gap-4">
-                    <button id="mobile-menu-btn" class="btn btn--ghost" style="display: none;">
-                        <i data-lucide="menu"></i>
-                    </button>
-                    <h1 class="page-title" style="font-size: 1.25rem; font-weight: 600;">Tableau de bord</h1>
-                </div>
-                
-                <div class="header__right" id="headerActions"></div>
-            </header>
-
-            <!-- Page Content -->
-            <div class="page-content" style="padding: 2rem;">
-                
-                <!-- Welcome Card -->
-                <div class="dashboard-welcome card animate-fade-in stagger-1" style="margin-bottom: 2rem; padding: 1.5rem; background: linear-gradient(135deg, var(--card-bg) 0%, rgba(217, 119, 6, 0.1) 100%); border-left: 4px solid var(--primary-color);">
-                    <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Bonjour, Admin 👋</h2>
-                    <p class="text-muted">Aujourd'hui, nous sommes le <span id="current-date"></span>.</p>
-                </div>
-
-                <!-- Stats Grid -->
-                <div class="dashboard-stats grid grid-4 gap-4" style="margin-bottom: 2rem;">
-                    
-                    <div class="stat-card card animate-fade-in stagger-1" style="padding: 1.5rem; border-bottom: 4px solid var(--warning-color);">
-                        <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                            <span class="text-muted" style="font-size: 0.875rem;">Membres Actifs</span>
-                            <div style="padding: 0.5rem; background-color: rgba(245, 158, 11, 0.1); border-radius: 0.5rem; color: var(--warning-color);">
-                                <i data-lucide="users" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </div>
-                        </div>
-                        <div style="font-size: 1.875rem; font-weight: 700; margin-bottom: 0.5rem;">156</div>
-                        <div style="font-size: 0.875rem; color: var(--success-color); display: flex; align-items: center; gap: 0.25rem;">
-                            <i data-lucide="trending-up" style="width: 1rem; height: 1rem;"></i>
-                            <span>+12 ce mois</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card card animate-fade-in stagger-2" style="padding: 1.5rem; border-bottom: 4px solid var(--success-color);">
-                        <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                            <span class="text-muted" style="font-size: 0.875rem;">Cotisations Perçues</span>
-                            <div style="padding: 0.5rem; background-color: rgba(16, 185, 129, 0.1); border-radius: 0.5rem; color: var(--success-color);">
-                                <i data-lucide="wallet" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </div>
-                        </div>
-                        <div style="font-size: 1.875rem; font-weight: 700; margin-bottom: 0.5rem;">2,450,000 <span style="font-size: 1rem; color: var(--text-muted);">FCFA</span></div>
-                        <div style="font-size: 0.875rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;">
-                            <span>Total de l'année</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card card animate-fade-in stagger-3" style="padding: 1.5rem; border-bottom: 4px solid #6366f1;">
-                        <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                            <span class="text-muted" style="font-size: 0.875rem;">Réunions ce mois</span>
-                            <div style="padding: 0.5rem; background-color: rgba(99, 102, 241, 0.1); border-radius: 0.5rem; color: #6366f1;">
-                                <i data-lucide="calendar" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </div>
-                        </div>
-                        <div style="font-size: 1.875rem; font-weight: 700; margin-bottom: 0.5rem;">3</div>
-                        <div style="font-size: 0.875rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.25rem;">
-                            <span>Prochaine le 15 Oct</span>
-                        </div>
-                    </div>
-
-                    <div class="stat-card card animate-fade-in stagger-4" style="padding: 1.5rem; border-bottom: 4px solid var(--danger-color);">
-                        <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
-                            <span class="text-muted" style="font-size: 0.875rem;">Votes en cours</span>
-                            <div style="padding: 0.5rem; background-color: rgba(239, 68, 68, 0.1); border-radius: 0.5rem; color: var(--danger-color);">
-                                <i data-lucide="vote" style="width: 1.25rem; height: 1.25rem;"></i>
-                            </div>
-                        </div>
-                        <div style="font-size: 1.875rem; font-weight: 700; margin-bottom: 0.5rem;">2</div>
-                        <div style="font-size: 0.875rem; color: var(--warning-color); display: flex; align-items: center; gap: 0.25rem;">
-                            <i data-lucide="clock" style="width: 1rem; height: 1rem;"></i>
-                            <span>Se terminent bientôt</span>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Dashboard Grid -->
-                <div class="dashboard-grid grid grid-2 gap-4 animate-fade-in stagger-4">
-                    
-                    <!-- Recent Activity -->
-                    <div class="card">
-                        <div class="card__header flex justify-between items-center" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
-                            <h3 style="font-weight: 600;">Activité récente</h3>
-                            <button class="btn btn--ghost" style="font-size: 0.875rem; padding: 0.25rem 0.5rem;">Voir tout</button>
-                        </div>
-                        <div class="card__body" style="padding: 1.5rem;">
-                            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                                
-                                <div class="flex gap-4 items-start">
-                                    <div style="padding: 0.5rem; background-color: rgba(16, 185, 129, 0.1); border-radius: 50%; color: var(--success-color);">
-                                        <i data-lucide="user-plus" style="width: 1.25rem; height: 1.25rem;"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <p style="font-weight: 500; font-size: 0.95rem;">Nouveau membre inscrit</p>
-                                        <p class="text-muted" style="font-size: 0.875rem;">Mamadou Diallo a rejoint l'association.</p>
-                                        <span class="text-muted" style="font-size: 0.75rem;">Il y a 2 heures</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex gap-4 items-start">
-                                    <div style="padding: 0.5rem; background-color: rgba(245, 158, 11, 0.1); border-radius: 50%; color: var(--warning-color);">
-                                        <i data-lucide="banknote" style="width: 1.25rem; height: 1.25rem;"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <p style="font-weight: 500; font-size: 0.95rem;">Cotisation payée</p>
-                                        <p class="text-muted" style="font-size: 0.875rem;">Aisha Touré a payé sa cotisation mensuelle (10,000 FCFA).</p>
-                                        <span class="text-muted" style="font-size: 0.75rem;">Il y a 5 heures</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex gap-4 items-start">
-                                    <div style="padding: 0.5rem; background-color: rgba(99, 102, 241, 0.1); border-radius: 50%; color: #6366f1;">
-                                        <i data-lucide="file-text" style="width: 1.25rem; height: 1.25rem;"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <p style="font-weight: 500; font-size: 0.95rem;">PV de réunion ajouté</p>
-                                        <p class="text-muted" style="font-size: 0.875rem;">Le compte rendu de l'Assemblée Générale a été publié.</p>
-                                        <span class="text-muted" style="font-size: 0.75rem;">Hier, 14:30</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-4 items-start">
-                                    <div style="padding: 0.5rem; background-color: rgba(239, 68, 68, 0.1); border-radius: 50%; color: var(--danger-color);">
-                                        <i data-lucide="vote" style="width: 1.25rem; height: 1.25rem;"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <p style="font-weight: 500; font-size: 0.95rem;">Nouveau vote ouvert</p>
-                                        <p class="text-muted" style="font-size: 0.875rem;">"Choix du lieu pour la retraite annuelle" est ouvert aux votes.</p>
-                                        <span class="text-muted" style="font-size: 0.75rem;">Hier, 09:15</span>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-4 items-start">
-                                    <div style="padding: 0.5rem; background-color: rgba(245, 158, 11, 0.1); border-radius: 50%; color: var(--warning-color);">
-                                        <i data-lucide="banknote" style="width: 1.25rem; height: 1.25rem;"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <p style="font-weight: 500; font-size: 0.95rem;">Cotisation payée</p>
-                                        <p class="text-muted" style="font-size: 0.875rem;">Ibrahim Keita a payé sa cotisation annuelle.</p>
-                                        <span class="text-muted" style="font-size: 0.75rem;">2 Oct, 10:00</span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Upcoming Events -->
-                    <div class="card">
-                        <div class="card__header flex justify-between items-center" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
-                            <h3 style="font-weight: 600;">Événements à venir</h3>
-                            <button class="btn btn--ghost" style="font-size: 0.875rem; padding: 0.25rem 0.5rem;">Calendrier complet</button>
-                        </div>
-                        <div class="card__body" style="padding: 1.5rem;">
-                            <div style="display: flex; flex-direction: column; gap: 1.25rem;">
-                                
-                                <div class="flex gap-4 items-center" style="padding: 1rem; background-color: var(--bg-color); border-radius: 0.5rem; border: 1px solid var(--border-color);">
-                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 3.5rem; padding: 0.5rem; background-color: var(--card-bg); border-radius: 0.5rem; border: 1px solid var(--primary-color);">
-                                        <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--primary-color); font-weight: 600;">Oct</span>
-                                        <span style="font-size: 1.25rem; font-weight: 700;">15</span>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h4 style="font-weight: 600; margin-bottom: 0.25rem;">Réunion Mensuelle du Bureau</h4>
-                                        <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: var(--text-muted);">
-                                            <span style="display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="clock" style="width: 0.875rem; height: 0.875rem;"></i> 18:00 - 20:00</span>
-                                            <span style="display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="map-pin" style="width: 0.875rem; height: 0.875rem;"></i> En ligne (Zoom)</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-4 items-center" style="padding: 1rem; background-color: var(--bg-color); border-radius: 0.5rem; border: 1px solid var(--border-color);">
-                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 3.5rem; padding: 0.5rem; background-color: var(--card-bg); border-radius: 0.5rem; border: 1px solid var(--primary-color);">
-                                        <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--primary-color); font-weight: 600;">Oct</span>
-                                        <span style="font-size: 1.25rem; font-weight: 700;">28</span>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h4 style="font-weight: 600; margin-bottom: 0.25rem;">Assemblée Générale Ordinaire</h4>
-                                        <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: var(--text-muted);">
-                                            <span style="display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="clock" style="width: 0.875rem; height: 0.875rem;"></i> 09:00 - 13:00</span>
-                                            <span style="display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="map-pin" style="width: 0.875rem; height: 0.875rem;"></i> Siège TRIPA</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex gap-4 items-center" style="padding: 1rem; background-color: var(--bg-color); border-radius: 0.5rem; border: 1px solid var(--border-color);">
-                                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 3.5rem; padding: 0.5rem; background-color: var(--card-bg); border-radius: 0.5rem; border: 1px solid var(--primary-color);">
-                                        <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--primary-color); font-weight: 600;">Nov</span>
-                                        <span style="font-size: 1.25rem; font-weight: 700;">12</span>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h4 style="font-weight: 600; margin-bottom: 0.25rem;">Dîner de Gala Annuel</h4>
-                                        <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: var(--text-muted);">
-                                            <span style="display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="clock" style="width: 0.875rem; height: 0.875rem;"></i> 20:00 - 00:00</span>
-                                            <span style="display: flex; align-items: center; gap: 0.25rem;"><i data-lucide="map-pin" style="width: 0.875rem; height: 0.875rem;"></i> Hôtel Radisson</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-        </main>
+  <div class="app">
+    <aside id="sidebarHost"></aside>
+    <div>
+      <header id="topbarHost"></header>
+      <main class="content" id="content"></main>
     </div>
-
-    <!-- Scripts -->
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-
-        // Set current date
-        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').textContent = new Date().toLocaleDateString('fr-FR', dateOptions);
-
-        // Mobile sidebar toggle
-        const sidebar = document.getElementById('sidebar');
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-        // Note: For a real app, you would add CSS to handle the media queries that show/hide these elements,
-        // but inline styles are used to show the logic.
-        
-        // Ensure menu button is only shown on mobile.
-        // We'll simulate this by adding a media query dynamically if not in CSS.
-        const style = document.createElement('style');
-        style.textContent = `
-            @media (max-width: 768px) {
-                #mobile-menu-btn { display: block !important; }
-                .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; position: fixed; top: 0; left: 0; height: 100vh; z-index: 50; }
-                .sidebar.open { transform: translateX(0); }
-                .search-bar { display: none; } /* Hide search on small screens to save space */
-                .grid-4 { grid-template-columns: 1fr; }
-                .grid-2 { grid-template-columns: 1fr; }
-            }
-        `;
-        document.head.appendChild(style);
-
-        mobileMenuBtn.addEventListener('click', () => {
-            sidebar.classList.add('open');
-            sidebarOverlay.style.display = 'block';
-        });
-
-        sidebarOverlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            sidebarOverlay.style.display = 'none';
-        });
-    </script>
-
-    <!-- Session guard: validation Super Admin obligatoire -->
-    <script src="js/api.js"></script>
-    <script src="js/utils.js"></script>
+  </div>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const profile=await requireAuth(['active']); if(!profile) return;
+      buildLayout('dashboard','Tableau de bord');
+      const content=document.getElementById('content');
+      content.innerHTML='<div class="grid grid--4 mb-6" id="statGrid"></div>'+
+        '<div class="card"><div class="card__header"><h3>Accès rapide</h3></div><div class="card__body"><div class="grid grid--3" id="quick"></div></div></div>';
+      const keys=['adherents','cotisations','evenements','taches'];
+      const counts={};
+      for(const k of keys){ const {data}=await fetchAll(k,{limit:5000}); counts[k]=(data||[]).length; }
+      document.getElementById('statGrid').innerHTML=keys.map(k=>{ const s=ENTITY_SCHEMA[k];
+        return `<div class="card card__body"><div class="row" style="gap:12px;"><i data-lucide="${s.icon}" style="color:var(--accent)"></i>
+          <div><div style="font-size:26px;font-weight:600;">${counts[k]}</div><div class="muted">${s.label}</div></div></div></div>`; }).join('');
+      document.getElementById('quick').innerHTML=Object.keys(ENTITY_SCHEMA).map(k=>{ const s=ENTITY_SCHEMA[k];
+        return `<a class="card card__body row" href="entity.html?t=${k}" style="gap:10px;"><i data-lucide="${s.icon}" style="color:var(--accent)"></i>${s.label}</a>`; }).join('');
+      lucide.createIcons();
+    });
+  </script>
 </body>
 </html>
