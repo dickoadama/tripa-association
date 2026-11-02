@@ -17,8 +17,10 @@ RUN npm install --prefix server --omit=dev
 COPY . .
 RUN npm run build
 
-# 4) Dossier de la base SQLite locale (auto-hébergement sans Turso) + utilisateur non-root
-RUN mkdir -p /app/server/data \
+# 4) Dossiers base SQLite + sauvegardes (auto-hébergement) + utilisateur non-root.
+#    Pré-créer /app/backups avec le bon propriétaire : un volume Docker nommé, monté
+#    vide, hérite des droits de ce répertoire de l'image (sinon l'user node ne peut écrire).
+RUN mkdir -p /app/server/data /app/backups \
  && addgroup -S node && adduser -S node -G node \
  && chown -R node:node /app
 USER node

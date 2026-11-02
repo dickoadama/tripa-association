@@ -11,6 +11,7 @@ Le frontend est **100 % autonome** : aucune dépendance externe (icônes et grap
 - [Démarrage local (sans Docker)](#démarrage-local-sans-docker)
 - [Auto-hébergement avec Docker](#auto-hébergement-avec-docker)
 - [HTTPS/TLS en une commande (Caddy)](#httpstls-en-une-commande-caddy)
+- [Sauvegarde & restauration](#sauvegarde--restauration)
 - [Reverse proxy & HTTPS](#reverse-proxy--https)
 - [Déploiement managé (Render)](#déploiement-managé-render)
 - [Rôles et comptes](#rôles-et-comptes)
@@ -116,6 +117,25 @@ docker compose -f docker-compose.https.yml up -d --build
 Puis `https://<DOMAIN>`. Les certificats et la config Caddy sont persistés dans les volumes `caddy-data` / `caddy-config`. Le fichier `Caddyfile` fourni est à adapter si vous avez des besoins avancés (multiple domaines, wildcards, DNS challenge…).
 
 > **DNS challenge (option)** : si TRIPA n'est pas joignable sur le port 80 (derrière un NAT), remplacez le bloc site du `Caddyfile` par `{$DOMAIN} { tls { dns cloudflare {env.CLOUDFLARE_API_TOKEN} } reverse_proxy tripa:10000 }` et exposez ce jeton à Caddy.
+
+## Sauvegarde & restauration
+`scripts/backup.js` exporte la base **complète** (entités **et** comptes) en JSON — DB-agnostique, il passe par `server/db.js` et fonctionne donc indifféremment avec **SQLite local** ou **Turso**, sans accès HTTP ni jeton. En mode SQLite, il produit aussi une **capture binaire** cohérente via `VACUUM INTO`.
+
+**Automatique** : les fichiers `docker-compose*.yml` incluent un service `backup` qui lance une sauvegarde au démarrage puis toutes les `BACKUP_INTERVAL` secondes (6 h par défaut), dans le volume `tripa-backups`. La **rétention** garde les `BACKUP_KEEP` lots les plus récents (`BACKUP_REDACT_SECRETS=true` pour ne pas consigner les empreintes de mots de passe).
+
+```bash
+# Ponctuel, en local (écrit dans ./backups) :
+npm run backup
+
+# Lister / récupérer les sauvegardes du volume Docker :
+docker run --rm -v tripa_tripa-backups:/b -v "$PWD/backups:/out" alpine cp -r /b/. /out/
+```
+
+**Restauration** :
+- **JSON** — UI **Paramètres → Restauration** (ou `POST /api/backup/restore`) pour recharger les entités ; les comptes `users` du fichier servent en cas de perte totale (réimport SQL / reconstruction).
+- **SQLite** — remplacer `server/data/tripa.db` par le `.db` d'un lot arrêté (`docker compose down`, restaurer, `up`) redonne l'état intégral, comptes inclus.
+
+> ⚠️ Les sauvegardes contiennent les données nominatives de l'association (et, par défaut, les empreintes de mots de passe). Conservez-elles **chiffrées / protégées** et n'exposez jamais le dossier `backups/` (ignoré par git et par l'image Docker).
 
 ## Reverse proxy & HTTPS
 En production exposée sur Internet, placez TRIPA derrière un reverse proxy TLS (Caddy, Nginx, Traefik) et passez `COOKIE_SECURE=true`.

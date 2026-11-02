@@ -49,8 +49,30 @@ services:
     networks:
       - tripa-net
 
+  # Sidecar de sauvegarde (identique au stack HTTP) : boucle periodique, ecrit dans tripa-backups.
+  backup:
+    build: .
+    image: tripa:latest
+    container_name: tripa-backup
+    restart: unless-stopped
+    depends_on:
+      - tripa
+    environment:
+      TURSO_DATABASE_URL: ${TURSO_DATABASE_URL:-}
+      TURSO_AUTH_TOKEN: ${TURSO_AUTH_TOKEN:-}
+      BACKUP_DIR: /app/backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_REDACT_SECRETS: ${BACKUP_REDACT_SECRETS:-false}
+    volumes:
+      - tripa-data:/app/server/data
+      - tripa-backups:/app/backups
+    networks:
+      - tripa-net
+    command: ["sh", "-c", "trap 'exit 0' TERM; while true; do node /app/scripts/backup.js; sleep ${BACKUP_INTERVAL:-21600}; done"]
+
 volumes:
   tripa-data:
+  tripa-backups:
   caddy-data:
   caddy-config:
 

@@ -26,5 +26,26 @@ services:
     volumes:
       - tripa-data:/app/server/data
 
+  # Sidecar de sauvegarde : s'exécute au démarrage puis toutes les BACKUP_INTERVAL secondes.
+  # Lit la base via server/db.js (SQLite du volume, ou Turso si configuré) et écrit dans le volume tripa-backups.
+  backup:
+    build: .
+    image: tripa:latest
+    container_name: tripa-backup
+    restart: unless-stopped
+    depends_on:
+      - tripa
+    environment:
+      TURSO_DATABASE_URL: ${TURSO_DATABASE_URL:-}
+      TURSO_AUTH_TOKEN: ${TURSO_AUTH_TOKEN:-}
+      BACKUP_DIR: /app/backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      BACKUP_REDACT_SECRETS: ${BACKUP_REDACT_SECRETS:-false}
+    volumes:
+      - tripa-data:/app/server/data
+      - tripa-backups:/app/backups
+    command: ["sh", "-c", "trap 'exit 0' TERM; while true; do node /app/scripts/backup.js; sleep ${BACKUP_INTERVAL:-21600}; done"]
+
 volumes:
   tripa-data:
+  tripa-backups:
