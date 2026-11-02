@@ -1,0 +1,30 @@
+# TRIPA — Auto-hébergement avec Docker Compose.
+# Démarrage rapide :
+#   1) cp .env.example .env        (puis ajustez JWT_SECRET, SUPER_ADMIN_PASSWORD…)
+#   2) docker compose up -d --build
+# Sans TURSO_DATABASE_URL, la base SQLite locale est écrite dans le volume « tripa-data »
+# (persistante entre les redémarrages). Aucun service externe requis.
+services:
+  tripa:
+    build: .
+    image: tripa:latest
+    container_name: tripa
+    restart: unless-stopped
+    ports:
+      - "${PORT:-10000}:${PORT:-10000}"
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-10000}
+      JWT_SECRET: ${JWT_SECRET:-mettez-une-longue-chaine-aleatoire-ici}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-superadmin@tripa.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-tripa-super-2026}
+      # Base externalisée (optionnelle) : laissez vide pour la SQLite locale du volume.
+      TURSO_DATABASE_URL: ${TURSO_DATABASE_URL:-}
+      TURSO_AUTH_TOKEN: ${TURSO_AUTH_TOKEN:-}
+      # HTTPS derrière un reverse proxy => COOKIE_SECURE=true ; en HTTP simple => false.
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - tripa-data:/app/server/data
+
+volumes:
+  tripa-data:

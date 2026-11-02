@@ -128,8 +128,8 @@ function openForm(id){
   const row = id ? ROWS.find(r => r.id === id) : {};
   document.getElementById('formTitle').textContent = (id ? 'Modifier ' : 'Nouveau ') + schema.singular;
   document.getElementById('entityForm').innerHTML =
-    schema.fields.map(f => `<div class="field"><label class="label">${esc(f.label)}${f.required ? ' *' : ''}</label>${fieldInput(f, row[f.key])}</div>`).join('') +
-    `<div class="row mt-4"><button type="submit" class="btn btn--primary">Enregistrer</button>
+    schema.fields.map(f => `<div class="field${f.type === 'textarea' ? ' field--full' : ''}"><label class="label">${esc(f.label)}${f.required ? ' <span class="req">*</span>' : ''}</label>${fieldInput(f, row[f.key])}</div>`).join('') +
+    `<div class="row mt-4 field--full"><button type="submit" class="btn btn--primary"><i data-lucide="save"></i> Enregistrer</button>
       <button type="button" class="btn btn--ghost" onclick="closeModal('formModal')">Annuler</button></div>`;
   document.getElementById('entityForm').onsubmit = submitForm;
   openModal('formModal');

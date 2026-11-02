@@ -1,68 +1,130 @@
 # TRIPA
 
-Plateforme de gestion d'association — **100 % statique** (HTML / CSS / JavaScript), sans backend ni base de données. Les données sont stockées dans le `localStorage` du navigateur. Déployable telle quelle sur **GitHub Pages**.
+Plateforme de gestion d'association — **application client-serveur** (frontend HTML/CSS/JS vanilla + backend **Node/Express** + base **Turso/libSQL**). Sessions par **cookie httpOnly + JWT**, mots de passe **hachés (bcryptjs)**, données cloisonnées par association.
 
-> ⚠️ Sans serveur, l'authentification est **symbolique** : les données restent locales à chaque navigateur et ne sont **pas** synchronisées entre utilisateurs. Ne stockez aucune information confidentielle.
+Le frontend est **100 % autonome** : aucune dépendance externe (icônes et graphiques sont auto-hébergés, police système). Il peut donc tourner entièrement hors-ligne une fois servi.
 
 ## Sommaire
 - [Fonctionnalités](#fonctionnalités)
 - [Architecture](#architecture)
-- [Entités gérées](#entités-gérées)
+- [Environnement et variables](#environnement-et-variables)
+- [Démarrage local (sans Docker)](#démarrage-local-sans-docker)
+- [Auto-hébergement avec Docker](#auto-hébergement-avec-docker)
+- [Reverse proxy & HTTPS](#reverse-proxy--https)
+- [Déploiement managé (Render)](#déploiement-managé-render)
 - [Rôles et comptes](#rôles-et-comptes)
-- [Installation et prévisualisation](#installation-et-prévisualisation)
-- [Déploiement sur GitHub Pages](#déploiement-sur-github-pages)
-- [Limites connues](#limites-connues)
+- [Maintenance](#maintenance)
 
 ## Fonctionnalités
-- Tableau de bord avec compteurs et accès rapides.
-- Gestion CRUD complète de 8 entités via un moteur générique.
-- Console Super Admin : validation / rejet / suspension des comptes admin, mot de passe temporaire.
-- Réglages : profil et changement de mot de passe.
-- Design clair et minimaliste, **sans animation d'entrée** (affichage instantané, vue stable).
+- **Tableau de bord** : compteurs agrégés (`/api/stats`) et graphiques (donut/barres, moteur local).
+- **8 entités** gérées par un moteur CRUD générique (`entity.html?t=<entité>`) : adhérents, cotisations, événements, activités, communications, achats, documents, tâches.
+- **Console Super Admin** : validation / rejet / suspension des comptes, mot de passe temporaire.
+- **Journal d'activité** : frise des créations/modifications/suppressions.
+- **Réglages** en onglets : profil, apparence (thème **clair/sombre/auto**, accent, densité), notifications, données (export/restauration), sécurité.
+- **Pages Profil & Aide**, **export PDF/impression**, **PWA** (coquille hors-ligne), **recherche globale** (Ctrl+K).
 
 ## Architecture
 ```
 tripa/
-├── index.html            Connexion
-├── register.html         Inscription (soumis à validation)
-├── dashboard.html        Tableau de bord
-├── entity.html           Écran générique (toutes les entités)
-├── admin-management.html Console Super Admin
-├── settings.html         Réglages
-├── css/app.css           Design system (tokens + composants)
-└── js/
-    ├── api.js            Couche de données localStorage + auth + CRUD
-    ├── utils.js          UI kit, navigation, registre ENTITY_SCHEMA
-    ├── auth.js           Login / register
-    ├── entity.js         Moteur CRUD générique piloté par ?t=<entité>
-    ├── admin-management.js  Console Super Admin
-    └── settings.js       Profil + mot de passe
+├── public/            Frontend (source de développement)
+│   ├── *.html         Pages (index, register, dashboard, entity, admin-management,
+│   │                  settings, profile, help, activity)
+│   ├── css/app.css    Design system (thème, densité, composants, effets sobres)
+│   ├── js/            Modules : api, utils, prefs, auth, entity, admin-management,
+│   │                  settings, profile, help, activity, pwa,
+│   │                  lucide (icônes locales), chart (graphiques locaux)
+│   ├── sw.js          Service Worker (coquille hors-ligne)
+│   └── manifest.webmanifest
+├── server/            Backend Express (API REST + sert le build)
+│   ├── server.js      Routes, authentification, CRUD générique, stats, journal
+│   ├── db.js          Accès Turso / SQLite local + création des tables
+│   ├── auth.js        JWT + cookie + bcrypt + middlewares
+│   └── schema.js      Registre des entités (colonnes/types côté serveur)
+├── build.js           Minification public/ → dist/ (terser + clean-css)
+├── Dockerfile         Image d'auto-hébergement
+├── docker-compose.yml Stack prête à l'emploi (base SQLite persistée)
+└── render.yaml        Blueprint Render
 ```
-**Point d'extension unique :** toute la persistance est isolée dans `js/api.js`. Les modules ne font que consommer des fonctions asynchrones renvoyant `{ data, error }`.
+**Point d'entrée unique** : `server/server.js`. Il sert `dist/` s'il existe (build minifié), sinon `public/` (dev). Toute la persistance et les secrets restent côté serveur.
 
-## Entités gérées
-`adherents`, `cotisations`, `evenements`, `activites`, `communications`, `achats`, `documents`, `taches`.
+## Environnement et variables
+Le serveur lit son environnement via `dotenv` (depuis `server/.env` en mode nu, ou via l'environnement du conteneur).
 
-Chaque entité est déclarée dans `ENTITY_SCHEMA` (`js/utils.js`) : la page `entity.html?t=<entité>` construit automatiquement liste, recherche, formulaire modal et actions. Ajouter une entité = ajouter une entrée dans le schéma + une entrée dans `NAV`.
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `PORT` | Port écouté | `10000` |
+| `JWT_SECRET` | Signature des jetons (longue chaîne aléatoire) | généré aléatoirement (sessions invalidées au redémarrage) |
+| `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` | Compte Super Admin créé au 1er lancement | `superadmin@tripa.com` / `tripa-super-2026` |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | Base Turso. **Vide ⇒ SQLite locale** `server/data/tripa.db` | vide |
+| `COOKIE_SECURE` | `true` derrière HTTPS, `false` en HTTP simple | `true` si `NODE_ENV=production`, sinon `false` |
+| `NODE_ENV` | `production` active le cache-d'abord du build | — |
+
+Exemples fournis : `.env.example` (racine, pour Docker) et `server/.env.example` (mode nu).
+
+## Démarrage local (sans Docker)
+```powershell
+# 1) Dépendances
+npm install
+npm --prefix server install
+
+# 2) (Optionnel) copier l'exemple d'environnement
+#    server\.env.example -> server\.env et ajuster JWT_SECRET etc.
+
+# 3) Lancer (base SQLite locale créée automatiquement)
+npm start
+```
+Puis ouvrir `http://localhost:10000`. Pour générer le build minifié : `npm run build` (le serveur sert alors `dist/`).
+
+## Auto-hébergement avec Docker
+La façon la plus simple de déployer TRIPA chez vous, **sans aucun service externe** (base SQLite persistée dans un volume).
+
+```bash
+# 1) Copier et personnaliser l'environnement
+cp .env.example .env
+#   → renseignez au minimum JWT_SECRET et SUPER_ADMIN_PASSWORD
+#   → openssl rand -hex 32 pour un secret robuste
+
+# 2) Construire et démarrer
+docker compose up -d --build
+
+# 3) Ouvrir
+#   http://localhost:10000
+```
+
+Commandes utiles :
+```bash
+docker compose logs -f tripa      # suivre les journaux
+docker compose restart            # redémarrer
+docker compose down               # arrêter (les données restent dans le volume)
+docker volume ls                  # volume « tripa_data » = base SQLite
+```
+
+Les **données survivent** aux redémarrages (volume `tripa-data` monté sur `/app/server/data`). Pour utiliser **Turso** à la place, renseignez `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` dans `.env`.
+
+## Reverse proxy & HTTPS
+En production exposée sur Internet, placez TRIPA derrière un reverse proxy TLS (Caddy, Nginx, Traefik) et passez `COOKIE_SECURE=true`.
+
+Exemple **Caddy** :
+```
+tripa.example.com {
+    reverse_proxy 127.0.0.1:10000
+}
+```
+Le serveur est déjà configuré avec `trust proxy` (IP cliente et protocole correctement détectés). Variables d'environnement correspondantes :
+```
+NODE_ENV=production
+COOKIE_SECURE=true
+JWT_SECRET=<secret long et aléatoire>
+```
+
+## Déploiement managé (Render)
+Le dépôt contient `Dockerfile` et `render.yaml`. Sur Render : créez un service **Docker** à partir du dépôt, puis définissez dans le tableau de bord `JWT_SECRET`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `SUPER_ADMIN_PASSWORD` (le plan gratuit sert l'URL `/` comme sonde de santé ; `/api/health` est aussi disponible).
 
 ## Rôles et comptes
-- **Super Admin** : `superadmin@tripa.com`, mot de passe par défaut `tripa-super-2026` (à changer dans Réglages). Voit et gère tous les comptes.
-- **Admin** : crée son compte via `register.html` → statut `pending` → validé par le Super Admin. Ses données sont cloisonnées par `admin_id`.
+- **Super Admin** — `superadmin@tripa.com`, mot de passe par défaut `tripa-super-2026` (**à changer** dans Réglages). Voit et gère toutes les associations.
+- **Admin** — s'inscrit via `register.html`, statut `pending`, puis validé par le Super Admin. Ses données sont isolées par `admin_id`.
 
-## Installation et prévisualisation
-Aucune dépendance. Ouvrez simplement les fichiers, ou lancez un serveur local :
-```powershell
-cd e:\PROTECT\PROJET\HTML\tripa
-python -m http.server 8000
-```
-Puis : `http://localhost:8000`
-
-## Déploiement sur GitHub Pages
-1. Poussez le dépôt sur la branche `main`.
-2. GitHub → **Settings → Pages** → Source : `Deploy from a branch`, branche `main`, dossier `/ (root)` → **Save**.
-3. L'URL de production apparaît après ~1 minute.
-
-## Limites connues
-- Données locales au navigateur, non partagées entre utilisateurs ni appareils.
-- Authentification non sécurisée (hachage symbolique côté client).
-- `documents` : métadonnées uniquement (nom, catégorie, taille, lien) — pas de téléversement de fichier réel.
+## Maintenance
+- **Sauvegarde** : exportez depuis Réglages → Données (JSON via `/api/backup/all`), ou copiez le fichier `server/data/tripa.db` / le volume Docker.
+- **Mise à jour** : `git pull` puis `docker compose up -d --build` (ou `npm run build && npm start`).
+- **Sonde de santé** : `GET /api/health` renvoie `{ status, version, webRoot, time }`.

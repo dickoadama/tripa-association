@@ -18,7 +18,11 @@ function hash(pw) { return bcrypt.hashSync(String(pw), 10); }
 function verify(pw, hashStr) { try { return bcrypt.compareSync(String(pw), hashStr); } catch (e) { return false; } }
 
 function setAuthCookie(res, token) {
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: MAX_AGE });
+  // En auto-hébergement derrière un simple HTTP, COOKIE_SECURE=false évite que
+  // le navigateur rejette le cookie de session (sinon : sécurisé en production).
+  const secure = process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true'
+    : process.env.NODE_ENV === 'production';
+  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure, maxAge: MAX_AGE });
 }
 function clearAuthCookie(res) { res.clearCookie(COOKIE); }
 

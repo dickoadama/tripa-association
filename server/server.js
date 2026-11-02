@@ -11,6 +11,7 @@ const A = require('./auth');
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1); // derrière un reverse proxy (Caddy/Nginx) : IP & protocole corrects
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
@@ -20,6 +21,9 @@ const pub = path.join(__dirname, '..', 'public');
 const webRoot = fs.existsSync(path.join(dist, 'index.html')) ? dist : pub;
 app.use(express.static(webRoot, { extensions: ['html'] }));
 app.get('/', (_req, res) => res.sendFile(path.join(webRoot, 'index.html')));
+
+/* ---------- Sonde de santé (Docker / supervision) ---------- */
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', version: 3, webRoot: path.basename(webRoot), time: nowIso() }));
 
 /* ---------- Helpers ---------- */
 const nowIso = () => new Date().toISOString();
