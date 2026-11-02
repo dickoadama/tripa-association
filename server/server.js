@@ -109,6 +109,34 @@ app.delete('/api/admins/:id', A.requireUser, A.requireSuper, async (req, res) =>
   res.json({ data: true, error: null });
 });
 
+/* ---------- Statistiques agrégées (un seul appel pour le tableau de bord) ---------- */
+app.get('/api/stats', A.requireUser, async (req, res) => {
+  const isSuper = req.user.role === 'super_admin';
+  const scope = isSuper ? '' : ' WHERE admin_id = ?';
+  const scopeArgs = isSuper ? [] : [req.user.id];
+  const counts = {};
+  for (const key of ENTITY_KEYS) {
+    const r = await get(`SELECT COUNT(*) AS c FROM "${key}"${scope}`, scopeArgs);
+    counts[key] = r ? Number(r.c) : 0;
+  }
+  async function tally(key, col) {
+    const rows = await all(
+      `SELECT "${col}" AS k, COUNT(*) AS c FROM "${key}"${scope ? (scope + ' AND ') : ' WHERE '}"${col}" IS NOT NULL GROUP BY "${col}"`,
+      scopeArgs);
+    const m = {}; rows.forEach(r => { if (r.k != null && r.k !== '') m[r.k] = Number(r.c); }); return m;
+  }
+  const tallies = {
+    adherents: await tally('adherents', 'statut'),
+    cotisations: await tally('cotisations', 'statut'),
+    taches: await tally('taches', 'statut'),
+    evenements: await tally('evenements', 'type')
+  };
+  const tot = await get(
+    `SELECT COALESCE(SUM(montant),0) AS s FROM cotisations WHERE statut = 'payee'${isSuper ? '' : ' AND admin_id = ?'}`,
+    isSuper ? [] : [req.user.id]);
+  res.json({ data: { counts, tallies, total_encaisse: Number(tot ? tot.s : 0) }, error: null });
+});
+
 /* ---------- CRUD générique des entités ---------- */
 function validEntity(res, key) { if (!ENTITIES[key]) { bad(res, 404, 'Entité inconnue.'); return false; } return true; }
 

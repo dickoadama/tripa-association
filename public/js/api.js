@@ -78,6 +78,9 @@ async function deleteAdminAccount(id){ return req('DELETE', '/admins/' + id); }
 async function fetchBackup(){ return req('GET', '/backup/all'); }
 async function restoreBackup(entities){ return req('POST', '/backup/restore', { entities }); }
 
+/* ---------- Statistiques agrégées ---------- */
+async function fetchStats(){ return req('GET', '/stats'); }
+
 /* ---------- Gardes de session (côté client, le vrai contrôle est serveur) ---------- */
 async function requireAuth(allowed = ['active']) {
   const { data: profile, error } = await fetchCurrentUser();
