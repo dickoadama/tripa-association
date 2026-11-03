@@ -66,9 +66,9 @@
       document.getElementById('statGrid').innerHTML = stats.map(s=>{
         const schema=ENTITY_SCHEMA[s.k];
         return `<div class="card card__body"><div class="row" style="gap:12px;"><i data-lucide="${schema.icon}" style="color:var(--accent)"></i>
-          <div><div style="font-size:26px;font-weight:600;">${s.val}</div><div class="muted">${s.label}</div></div></div></div>`; }).join('') +
+          <div><div class="stat__num" style="font-size:26px;font-weight:600;" data-count="${s.val}">0</div><div class="muted">${s.label}</div></div></div></div>`; }).join('') +
         `<div class="card card__body" style="grid-column:1/-1;"><span class="muted">Total encaissé (cotisations payées)</span>
-          <div style="font-size:24px;font-weight:600;color:var(--success);">${formatCurrency(S.total_encaisse||0)}</div></div>`;
+          <div class="stat__num stat__money" style="font-size:24px;font-weight:600;color:var(--success);" data-count="${S.total_encaisse||0}">0 FCFA</div></div>`;
 
       if (window.Chart){
         doughnut(document.getElementById('cAdh'), S.tallies.adherents||{});

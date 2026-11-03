@@ -115,25 +115,88 @@ function rowTitle(entity,row){
   return t||row.titre||row.nom||row.libelle||row.fournisseur||row.periode||('Élément '+String(row.id||'').slice(0,6));
 }
 
-/* ---------- Effets : ondulation + révélation ---------- */
-function attachRipple(scope){
-  (scope||document).querySelectorAll('.btn').forEach(b=>{
-    if(b.dataset.ripple) return; b.dataset.ripple='1';
-    b.addEventListener('pointerdown',e=>{
-      const r=b.getBoundingClientRect(), s=document.createElement('span');
-      const size=Math.max(r.width,r.height); s.className='ripple';
-      s.style.width=s.style.height=size+'px'; s.style.left=(e.clientX-r.left-size/2)+'px'; s.style.top=(e.clientY-r.top-size/2)+'px';
-      b.appendChild(s); setTimeout(()=>s.remove(),600);
-    });
+/* ---------- Effets (CSS/JS purs) : ondulation, révélation, compteurs, projecteur ---------- */
+function attachRipple(){ ensureFx(); scanNow(); }
+function attachReveal(){ ensureFx(); scanNow(); }
+let FX_READY=false, FX_SCAN_PENDING=false, FX_REDUCE=false, FX_IO=null;
+function ensureFx(){
+  if(FX_READY) return; FX_READY=true;
+  FX_REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  /* Barre de progression + élévation de l'en-tête au défilement */
+  if(!document.getElementById('scrollProgress')){ const bar=document.createElement('div'); bar.id='scrollProgress'; document.body.appendChild(bar); }
+  const onScroll=()=>{ const b=document.getElementById('scrollProgress'); const de=document.documentElement, max=de.scrollHeight-de.clientHeight;
+    const top=de.scrollTop||document.body.scrollTop||window.scrollY||0;
+    if(b) b.style.width=(max>0?(top/max*100):0).toFixed(2)+'%';
+    const tb=document.querySelector('.topbar'); if(tb) tb.classList.toggle('is-scrolled', top>2); };
+  addEventListener('scroll',onScroll,{passive:true}); addEventListener('resize',onScroll); onScroll();
+
+  /* Ondulation déléguée (boutons, icones, onglets, liens nav) */
+  document.addEventListener('pointerdown',e=>{
+    if(FX_REDUCE) return;
+    const t=e.target.closest('.btn,.iconbtn,.tab,.nav-link'); if(!t) return;
+    const r=t.getBoundingClientRect(), s=document.createElement('span'), size=Math.max(r.width,r.height)||40;
+    s.className='ripple'; s.style.width=s.style.height=size+'px';
+    s.style.left=(e.clientX-r.left-size/2)+'px'; s.style.top=(e.clientY-r.top-size/2)+'px';
+    t.appendChild(s); setTimeout(()=>s.remove(),600);
+  });
+
+  /* Projecteur suivant le curseur sur les cartes */
+  if(!FX_REDUCE){
+    document.addEventListener('pointermove',e=>{
+      const c=e.target.closest('.card'); if(!c) return; const r=c.getBoundingClientRect();
+      c.style.setProperty('--mx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');
+      c.style.setProperty('--my',((e.clientY-r.top)/r.height*100).toFixed(1)+'%');
+    },{passive:true});
+  }
+
+  /* Observers : révélation en cascade + compteurs */
+  FX_IO=('IntersectionObserver' in window)? new IntersectionObserver(ents=>{
+    ents.forEach(en=>{ if(!en.isIntersecting) return; const el=en.target;
+      el.classList.add('in'); if(el.hasAttribute('data-count')) countUp(el,FX_REDUCE); FX_IO.unobserve(el); });
+  },{threshold:.08}) : null;
+
+  new MutationObserver(()=>scheduleScan()).observe(document.body,{childList:true,subtree:true});
+  scheduleScan();
+}
+/* Re-scan débounce sur setTimeout (fonctionne meme si rAF est gelé, onglet caché) */
+function scheduleScan(){ if(FX_SCAN_PENDING) return; FX_SCAN_PENDING=true; setTimeout(()=>{ FX_SCAN_PENDING=false; scanNow(); },160); }
+function gridIdx(el){ const p=el.parentElement; if(!p) return 0; return [...p.querySelectorAll(':scope > .reveal')].indexOf(el); }
+function scanNow(){
+  document.querySelectorAll('.content .card, .content .stat').forEach(el=>{
+    if(!el.classList.contains('card--hover')) el.classList.add('card--hover');
+    if(!FX_REDUCE) el.classList.add('card--spot');
+    if(!el.dataset.fxo){ el.dataset.fxo='1'; el.classList.add('reveal');
+      el.style.setProperty('--rd',Math.max(0,gridIdx(el))*45+'ms');
+      if(FX_IO) FX_IO.observe(el); else el.classList.add('in');
+    }
+  });
+  document.querySelectorAll('[data-count]').forEach(el=>{
+    if(el.dataset.fxc) return; el.dataset.fxc='1';
+    if(FX_IO) FX_IO.observe(el); else countUp(el,FX_REDUCE);
   });
 }
-function attachReveal(){
-  const els=[...document.querySelectorAll('.content .card, .content .stat')];
-  els.forEach(el=>{ el.classList.add('card--hover','reveal'); });
-  if(!('IntersectionObserver' in window)){ els.forEach(el=>el.classList.add('in')); return; }
-  const io=new IntersectionObserver(entries=>{ entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } }); },{threshold:.06});
-  els.forEach(el=>io.observe(el));
+function countUp(el,reduce){
+  if(el.dataset.counted) return; el.dataset.counted='1';
+  const target=parseFloat(String(el.getAttribute('data-count')).replace(/[^0-9.-]/g,''))||0;
+  const money=el.classList.contains('stat__money');
+  const fmt=v=> money? formatCurrency(v) : new Intl.NumberFormat('fr-FR').format(v);
+  if(reduce){ el.textContent=fmt(target); return; }
+  const dur=950, t0=performance.now();
+  setTimeout(()=>{ el.textContent=fmt(target); }, dur+120); /* filet : valeur finale toujours écrite */
+  const step=now=>{ const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent=fmt(Math.round(target*e)); if(k<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
 }
+/* Filet de sécurité : révéle/compte tout élément visible si IO n'a pas livré */
+addEventListener('load',()=>setTimeout(()=>{
+  const vh=innerHeight||600;
+  document.querySelectorAll('.reveal:not(.in), [data-count]:not([data-counted])').forEach(el=>{
+    const r=el.getBoundingClientRect(); if(r.top < vh*1.2 && r.bottom > 0){
+      el.classList.add('in'); if(el.hasAttribute('data-count')) countUp(el,FX_REDUCE);
+    }
+  });
+},300));
 
 /* ---------- Menus déroulants ---------- */
 function wireDropdowns(){
@@ -243,7 +306,7 @@ function buildLayout(activeKey,pageTitle){
   }
 
   if(window.lucide) lucide.createIcons();
-  wireDropdowns(); attachRipple(); attachReveal();
+  wireDropdowns(); ensureFx();
 }
 function navLink(n,activeKey){ return `<a class="nav-link${n.key===activeKey?' is-active':''}" href="${n.href}"><i data-lucide="${n.icon}"></i><span>${n.label}</span></a>`; }
 function themeIcon(t){ return t==='dark'?'sun':t==='auto'?'monitor':'moon'; }
