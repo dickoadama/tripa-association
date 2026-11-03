@@ -1,6 +1,11 @@
-# Blueprint Render — déploie TRIPA comme service web Docker.
-# Base de données : Supabase (Postgres gratuit). DATABASE_URL et JWT_SECRET sont des
+# Blueprint Render — déploie TRIPA comme service web Docker (plan gratuit).
+# Base de données : Supabase (Postgres gratuit, sans CB). DATABASE_URL et JWT_SECRET sont des
 # secrets à saisir dans le tableau de bord Render (jamais commités).
+#
+# Déploiement en 1 clic (bouton "Deploy to Render") ou :
+#   1) Render → New Web Service → lier le repo GitHub dickoadama/tripa-association
+#   2) Runtime = Docker (Dockerfile détecté automatiquement)
+#   3) Renseigner les env vars marquées sync:false (DATABASE_URL, JWT_SECRET)
 services:
   - type: web
     name: tripa
@@ -8,13 +13,19 @@ services:
     plan: free
     region: frankfurt
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"                # Render sert en HTTPS
+      - key: DB_SSL_INSECURE
+        value: "true"                # Alpine ne connaît pas la CA intermédiaire Supabase
       - key: SUPER_ADMIN_EMAIL
         value: superadmin@tripa.com
       - key: SUPER_ADMIN_PASSWORD
-        value: tripa-super-2026   # à changer après le premier déploiement
+        sync: false                  # secret : à saisir dans le dashboard Render
       - key: DATABASE_URL
-        sync: false                # secret : chaîne de connexion Postgres Supabase
+        sync: false                  # secret : chaîne Postgres Supabase (Settings → Database)
       - key: JWT_SECRET
-        sync: false                # secret : longue chaîne aléatoire
+        sync: false                  # secret : openssl rand -hex 32
