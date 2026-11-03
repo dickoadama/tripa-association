@@ -270,6 +270,14 @@ html{scroll-behavior:smooth;}
 /* chiffres KPI alignés */
 .stat__num{font-variant-numeric:tabular-nums;}
 
+/* Transition de page (View Transitions API — CSS pur, degradation progressive) */
+@view-transition{ navigation:auto; }
+::view-transition-old(root){animation:vtOut .16s ease both;}
+::view-transition-new(root){animation:vtIn .24s cubic-bezier(.2,.7,.3,1) both;}
+@keyframes vtOut{from{opacity:1}to{opacity:0;}}
+@keyframes vtIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){ @view-transition{ navigation:none; } }
+
 @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important;} }
 .print-head{display:none;}
 @media print{
