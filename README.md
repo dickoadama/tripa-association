@@ -80,7 +80,7 @@ npm start
 Puis ouvrir `http://localhost:10000`. Pour générer le build minifié : `npm run build` (le serveur sert alors `dist/`).
 
 ### Démarrage sous Windows (si `npm` est bloqué)
-PowerShell peut refuser les scripts (`npm.ps1`) et afficher *« l'exécution de scripts est désactivée sur ce système »* ; le serveur ne démarre alors pas et le navigateur montre une **page blanche**. Trois parade- feu, du plus simple au plus pérenne :
+PowerShell peut refuser les scripts (`npm.ps1`) et afficher *« l'exécution de scripts est désactivée sur ce système »* ; le serveur ne démarre alors pas et le navigateur montre une **page blanche**. Trois parades, du plus simple au plus pérenne :
 ```powershell
 # A) Lancer Node directement (aucun script PowerShell)
 node server/server.js
