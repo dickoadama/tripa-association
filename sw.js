@@ -2,7 +2,7 @@
  * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne).
  * - API /api/* : réseau-toujours ; en cas d'échec, renvoie une erreur 'hors-ligne'
  *   pour que l'interface affiche un bandeau dédié (pas de données périmées silencieuses). */
-const CACHE = 'tripa-v6';
+const CACHE = 'tripa-v7';
 const SHELL = [
   './index.html', './register.html', './dashboard.html', './entity.html',
   './settings.html', './profile.html', './help.html', './activity.html',
