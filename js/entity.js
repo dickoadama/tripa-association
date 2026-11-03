@@ -42,7 +42,7 @@ function renderShell(schema){
       </div>
     </div>
     <div id="offlineBanner"></div>
-    <div class="card"><table class="table" id="dataTable"></table></div>
+    <div class="card"><div class="table-wrap"><table class="table" id="dataTable"></table></div></div>
     <div class="between mt-4 no-print"><span class="muted" id="pageInfo"></span>
       <div class="row"><button class="btn btn--ghost btn--sm" id="prevBtn">← Précédent</button>
       <button class="btn btn--ghost btn--sm" id="nextBtn">Suivant →</button></div></div>`;
