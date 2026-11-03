@@ -2,13 +2,13 @@
  * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne).
  * - API /api/* : réseau-toujours ; en cas d'échec, renvoie une erreur 'hors-ligne'
  *   pour que l'interface affiche un bandeau dédié (pas de données périmées silencieuses). */
-const CACHE = 'tripa-v5';
+const CACHE = 'tripa-v6';
 const SHELL = [
   './index.html', './register.html', './dashboard.html', './entity.html',
-  './admin-management.html', './settings.html', './profile.html', './help.html', './activity.html',
+  './settings.html', './profile.html', './help.html', './activity.html',
   './css/app.css', './manifest.webmanifest', './icons/icon.svg', './icons/icon-maskable.svg',
   './js/api.js', './js/utils.js', './js/prefs.js', './js/auth.js', './js/entity.js', './js/lucide.js', './js/chart.js',
-  './js/admin-management.js', './js/settings.js', './js/profile.js', './js/help.js', './js/activity.js', './js/pwa.js'
+  './js/settings.js', './js/profile.js', './js/help.js', './js/activity.js', './js/pwa.js'
 ];
 
 self.addEventListener('install', (e) => {
