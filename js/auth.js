@@ -84,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!ok) return;
     const btn = loginForm.querySelector('button[type=submit]');
     loading(btn, true);
-    await handleLogin(email, password, (k, m) => { loading(btn, false); showAlert(k, m); });
+    const remember = document.getElementById('remember')?.checked || false;
+    await handleLogin(email, password, (k, m) => { loading(btn, false); showAlert(k, m); }, remember);
   });
 
   /* ---- Inscription ---- */
@@ -112,9 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-async function handleLogin(email, password, feedback) {
+async function handleLogin(email, password, feedback, remember) {
   feedback = feedback || ((k, m) => alert(m));
-  const { data, error } = await loginUser(email, password);
+  const { data, error } = await loginUser(email, password, remember);
   if (error) { feedback('error', 'Connexion impossible : ' + error.message); return; }
   const profile = data && data.profile;
   if (!profile) { feedback('error', 'Aucun compte trouvé.'); return; }

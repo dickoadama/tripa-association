@@ -1,21 +1,33 @@
-/* TRIPA — Build frontend : copie public/ → dist/ en minifiant JS et CSS.
+/* TRIPA — Build frontend : copie les fichiers frontend (racine) → dist/ en minifiant JS et CSS.
  * - Terser avec mangle:false : préserve les noms de fonctions globales partagées
  *   entre les <script> classiques (fetchAll, esc, ENTITY_SCHEMA, openForm...).
  * - Clean-CSS : compacte le CSS.
- * Le serveur sert dist/ s'il existe, sinon public/ (mode dev). */
+ * Le serveur sert dist/ s'il existe, sinon la racine (mode dev). */
 const fs = require('fs');
 const path = require('path');
 const { minify } = require('terser');
 const CleanCSS = require('clean-css');
 
-const SRC = path.join(__dirname, 'public');
+const SRC = __dirname; // fichiers source à la racine du projet
 const OUT = path.join(__dirname, 'dist');
 
-function copyDir(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name), d = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyDir(s, d); else fs.copyFileSync(s, d);
+// Fichiers et dossiers frontend à copier (exclut server/, node_modules/, scripts/, backups/…)
+const FRONTEND_ITEMS = [
+  'index.html', 'register.html', 'dashboard.html', 'entity.html',
+  'admin-management.html', 'settings.html', 'profile.html', 'help.html', 'activity.html',
+  'css', 'js', 'icons', 'sw.js', 'manifest.webmanifest'
+];
+
+function copyItem(src, dest) {
+  const stat = fs.statSync(src);
+  if (stat.isDirectory()) {
+    fs.mkdirSync(dest, { recursive: true });
+    for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+      copyItem(path.join(src, entry.name), path.join(dest, entry.name));
+    }
+  } else {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
   }
 }
 
@@ -29,7 +41,11 @@ async function walk(dir, fn) {
 
 (async () => {
   try { fs.rmSync(OUT, { recursive: true, force: true }); } catch (e) {}
-  copyDir(SRC, OUT);
+  for (const item of FRONTEND_ITEMS) {
+    const src = path.join(SRC, item);
+    if (!fs.existsSync(src)) continue;
+    copyItem(src, path.join(OUT, item));
+  }
 
   let jsCount = 0, cssCount = 0;
   await walk(OUT, async (file) => {

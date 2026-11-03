@@ -15,11 +15,20 @@ app.set('trust proxy', 1); // derrière un reverse proxy (Caddy/Nginx) : IP & pr
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
-/* ---------- Fichiers statiques : dist/ (minifié) sinon public/ (dev) ---------- */
-const dist = path.join(__dirname, '..', 'dist');
-const pub = path.join(__dirname, '..', 'public');
-const webRoot = fs.existsSync(path.join(dist, 'index.html')) ? dist : pub;
-app.use(express.static(webRoot, { extensions: ['html'] }));
+/* ---------- Fichiers statiques : dist/ (minifié) → public/ → racine (dev) ---------- */
+const root = path.join(__dirname, '..');
+const dist = path.join(root, 'dist');
+const pub = path.join(root, 'public');
+let webRoot;
+if (fs.existsSync(path.join(dist, 'index.html'))) webRoot = dist;
+else if (fs.existsSync(path.join(pub, 'index.html'))) webRoot = pub;
+else webRoot = root; // mode dev : fichiers à la racine du projet
+
+// Protection : ne jamais servir server/, node_modules/, scripts/, backups/, .env…
+const DENY = /^\/(server|node_modules|scripts|backups|offsite)\/|^\/(\.env|package(-lock)?\.json|render\.yaml|Dockerfile|docker-compose|build\.js|\.git)/i;
+app.use((req, res, next) => { if (DENY.test(req.path)) return res.sendStatus(403); next(); });
+
+app.use(express.static(webRoot, { extensions: ['html'], dotfiles: 'deny' }));
 app.get('/', (_req, res) => res.sendFile(path.join(webRoot, 'index.html')));
 
 /* ---------- Sonde de santé (Docker / supervision) ---------- */
@@ -60,14 +69,14 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, remember } = req.body || {};
   const u = await get('SELECT * FROM users WHERE email = ?', [String(email || '').toLowerCase()]);
   if (!u || !A.verify(password, u.password_hash)) return bad(res, 401, 'Email ou mot de passe incorrect.');
   const profile = A.publicProfile(u);
   const canLogin = u.status === 'active' || u.role === 'super_admin';
   if (!canLogin) return res.json({ data: { token: null, profile }, error: null });
-  const token = A.signToken(u);
-  A.setAuthCookie(res, token);
+  const token = A.signToken(u, remember);
+  A.setAuthCookie(res, token, remember);
   res.json({ data: { token, profile }, error: null });
 });
 
@@ -181,7 +190,8 @@ app.get('/api/:entity', A.requireUser, async (req, res) => {
   // Recherche (colonnes texte)
   if (req.query.search) {
     const textCols = Object.entries(cols).filter(([, t]) => t === 'text').map(([c]) => c);
-    if (textCols.length) where.push('(' + textCols.map(c => `"${c}" LIKE ?`).join(' OR ') + ')');
+    // LOWER() pour une recherche insensible à la casse sur Postgres (SQLite l'est déjà).
+    if (textCols.length) where.push('(' + textCols.map(c => `LOWER("${c}") LIKE ?`).join(' OR ') + ')');
     const like = '%' + String(req.query.search).toLowerCase() + '%';
     textCols.forEach(() => args.push(like));
   }
@@ -208,6 +218,16 @@ app.post('/api/:entity', A.requireUser, async (req, res) => {
     [id, adminId, nowIso(), ...values]);
   await logActivity(req, 'create', key, { ...body, admin_id: adminId });
   res.json({ data: { id, admin_id: adminId, created_at: nowIso() }, error: null });
+});
+
+app.get('/api/:entity/:id', A.requireUser, async (req, res) => {
+  const key = req.params.entity; if (!validEntity(res, key)) return;
+  const isSuper = req.user.role === 'super_admin';
+  const args = [req.params.id]; const scope = isSuper ? '' : ' AND admin_id = ?';
+  if (!isSuper) args.push(req.user.id);
+  const row = await get(`SELECT * FROM "${key}" WHERE id = ?${scope}`, args);
+  if (!row) return bad(res, 404, 'Élément introuvable.');
+  res.json({ data: fromRow(row, ENTITIES[key].cols), error: null });
 });
 
 app.put('/api/:entity/:id', A.requireUser, async (req, res) => {

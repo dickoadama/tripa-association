@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRIPA — Console Super Admin</title>
+  <title>TRIPA — Mon profil</title>
   <link rel="stylesheet" href="css/app.css">
   <script src="js/prefs.js"></script>
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <meta name="theme-color" content="#4f46e5">
   <script src="js/lucide.js"></script>
 </head>
@@ -18,16 +19,9 @@
       <main class="content" id="content"></main>
     </div>
   </div>
-  <div class="modal" id="adminModal">
-    <div class="modal__box">
-      <div class="card__header"><h3 id="adminModalTitle">Compte</h3>
-        <button class="btn btn--icon btn--ghost" onclick="closeModal('adminModal')"><i data-lucide="x"></i></button></div>
-      <div class="card__body"><form id="adminForm"></form></div>
-    </div>
-  </div>
   <script src="js/api.js"></script>
   <script src="js/utils.js"></script>
-  <script src="js/admin-management.js"></script>
+  <script src="js/profile.js"></script>
   <script src="js/pwa.js"></script>
 </body>
 </html>

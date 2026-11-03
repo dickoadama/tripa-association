@@ -80,7 +80,7 @@ if (argv[0] === '--decrypt') {
 }
 
 /* ----- Mode sauvegarde ----- */
-const { init, all, fromRow, ENTITIES, ENTITY_KEYS, client } = require('../server/db');
+const { init, all, fromRow, ENTITIES, ENTITY_KEYS, client, backend } = require('../server/db');
 
 (async () => {
   await init();
@@ -96,7 +96,7 @@ const { init, all, fromRow, ENTITIES, ENTITY_KEYS, client } = require('../server
   const payload = {
     app: 'TRIPA', version: 3, kind: 'backup',
     created_at: new Date().toISOString(),
-    backend: process.env.TURSO_DATABASE_URL ? 'turso' : 'sqlite',
+    backend,
     encrypted: ENCRYPT,
     counts: Object.assign({ users: users.length }, Object.fromEntries(ENTITY_KEYS.map(k => [k, entities[k].length]))),
     users, entities
@@ -111,7 +111,7 @@ const { init, all, fromRow, ENTITIES, ENTITY_KEYS, client } = require('../server
   if (ENCRYPT) { fs.writeFileSync(base + '.json.enc', encryptBuffer(jsonBuf, pass)); produced.push(base + '.json.enc'); console.log('[backup] JSON chiffré : ' + base + '.json.enc (' + fs.statSync(base + '.json.enc').size + ' o)'); }
   else { fs.writeFileSync(base + '.json', jsonBuf); produced.push(base + '.json'); console.log(`[backup] JSON : ${base}.json (${jsonBuf.length} o · ${payload.counts.users} comptes, ${ENTITY_KEYS.reduce((a, k) => a + entities[k].length, 0)} lignes)`); }
 
-  if (!process.env.TURSO_DATABASE_URL) {
+  if (backend === 'sqlite') {
     try {
       await client.execute({ sql: 'VACUUM INTO ?', args: [base + '.db'] });
       if (ENCRYPT) { fs.writeFileSync(base + '.db.enc', encryptBuffer(fs.readFileSync(base + '.db'), pass)); fs.unlinkSync(base + '.db'); produced.push(base + '.db.enc'); console.log('[backup] SQLite chiffrée : ' + base + '.db.enc'); }

@@ -1,5 +1,6 @@
 # Blueprint Render — déploie TRIPA comme service web Docker.
-# Turso (base persistante) et JWT_SECRET doivent être renseignés dans le tableau de bord Render.
+# Base de données : Supabase (Postgres gratuit). DATABASE_URL et JWT_SECRET sont des
+# secrets à saisir dans le tableau de bord Render (jamais commités).
 services:
   - type: web
     name: tripa
@@ -13,9 +14,7 @@ services:
         value: superadmin@tripa.com
       - key: SUPER_ADMIN_PASSWORD
         value: tripa-super-2026   # à changer après le premier déploiement
-      - key: TURSO_DATABASE_URL
-        value: ""                  # ex : libsql://xxx.turso.io
-      - key: TURSO_AUTH_TOKEN
-        sync: false                # secret : à saisir dans le dashboard Render
+      - key: DATABASE_URL
+        sync: false                # secret : chaîne de connexion Postgres Supabase
       - key: JWT_SECRET
         sync: false                # secret : longue chaîne aléatoire

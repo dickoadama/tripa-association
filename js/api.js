@@ -54,8 +54,8 @@ async function deleteRow(table, id){ return req('DELETE', '/' + table + '/' + id
 
 /* ---------- Authentification ---------- */
 async function registerUser(payload){ return req('POST', '/auth/register', payload || {}); }
-async function loginUser(email, password){
-  const r = await req('POST', '/auth/login', { email, password });
+async function loginUser(email, password, remember){
+  const r = await req('POST', '/auth/login', { email, password, remember: !!remember });
   if (r.data && r.data.profile) {
     const st = r.data.profile.status, role = r.data.profile.role;
     r.data.token = (st === 'active' || role === 'super_admin') ? 'session' : null;

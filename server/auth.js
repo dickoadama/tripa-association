@@ -6,7 +6,8 @@ const { get } = require('./db');
 
 const SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const COOKIE = 'tripa_token';
-const MAX_AGE = 1000 * 60 * 60 * 24 * 7; // 7 jours
+const MAX_AGE_REMEMBER = 1000 * 60 * 60 * 24 * 30; // 30 jours ("Se souvenir de moi")
+const MAX_AGE_DEFAULT = 1000 * 60 * 60 * 12;       // 12 heures (session normale)
 
 function uuid() {
   return (crypto.randomUUID && crypto.randomUUID()) ||
@@ -17,16 +18,17 @@ function uuid() {
 function hash(pw) { return bcrypt.hashSync(String(pw), 10); }
 function verify(pw, hashStr) { try { return bcrypt.compareSync(String(pw), hashStr); } catch (e) { return false; } }
 
-function setAuthCookie(res, token) {
+function setAuthCookie(res, token, remember) {
   // En auto-hébergement derrière un simple HTTP, COOKIE_SECURE=false évite que
   // le navigateur rejette le cookie de session (sinon : sécurisé en production).
   const secure = process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true'
     : process.env.NODE_ENV === 'production';
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure, maxAge: MAX_AGE });
+  const maxAge = remember ? MAX_AGE_REMEMBER : MAX_AGE_DEFAULT;
+  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure, maxAge });
 }
 function clearAuthCookie(res) { res.clearCookie(COOKIE); }
 
-function signToken(user) { return jwt.sign({ uid: user.id }, SECRET, { expiresIn: '7d' }); }
+function signToken(user, remember) { return jwt.sign({ uid: user.id }, SECRET, { expiresIn: remember ? '30d' : '12h' }); }
 
 function publicProfile(u) {
   if (!u) return null;

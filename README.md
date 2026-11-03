@@ -1,6 +1,6 @@
 # TRIPA
 
-Plateforme de gestion d'association — **application client-serveur** (frontend HTML/CSS/JS vanilla + backend **Node/Express** + base **Turso/libSQL**). Sessions par **cookie httpOnly + JWT**, mots de passe **hachés (bcryptjs)**, données cloisonnées par association.
+Plateforme de gestion d'association — **application client-serveur** (frontend HTML/CSS/JS vanilla + backend **Node/Express** + base **Postgres (Supabase)**, Turso/libSQL ou SQLite local). Sessions par **cookie httpOnly + JWT**, mots de passe **hachés (bcryptjs)**, données cloisonnées par association.
 
 Le frontend est **100 % autonome** : aucune dépendance externe (icônes et graphiques sont auto-hébergés, police système). Il peut donc tourner entièrement hors-ligne une fois servi.
 
@@ -39,7 +39,7 @@ tripa/
 │   └── manifest.webmanifest
 ├── server/            Backend Express (API REST + sert le build)
 │   ├── server.js      Routes, authentification, CRUD générique, stats, journal
-│   ├── db.js          Accès Turso / SQLite local + création des tables
+│   ├── db.js          Accès Postgres (Supabase) / Turso / SQLite local + création des tables
 │   ├── auth.js        JWT + cookie + bcrypt + middlewares
 │   └── schema.js      Registre des entités (colonnes/types côté serveur)
 ├── build.js           Minification public/ → dist/ (terser + clean-css)
@@ -57,7 +57,9 @@ Le serveur lit son environnement via `dotenv` (depuis `server/.env` en mode nu, 
 | `PORT` | Port écouté | `10000` |
 | `JWT_SECRET` | Signature des jetons (longue chaîne aléatoire) | généré aléatoirement (sessions invalidées au redémarrage) |
 | `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` | Compte Super Admin créé au 1er lancement | `superadmin@tripa.com` / `tripa-super-2026` |
-| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | Base Turso. **Vide ⇒ SQLite locale** `server/data/tripa.db` | vide |
+| `DATABASE_URL` (ou `SUPABASE_DB_URL`) | Base **Postgres managée (Supabase)** — prioritaire sur Turso/SQLite | vide |
+| `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` | Base Turso (si `DATABASE_URL` vide). **Les deux vides ⇒ SQLite locale** `server/data/tripa.db` | vide |
+| `DB_SSL_INSECURE` | `true` uniquement si la vérification du certificat TLS Postgres (CA Supabase) échoue | `false` |
 | `COOKIE_SECURE` | `true` derrière HTTPS, `false` en HTTP simple | `true` si `NODE_ENV=production`, sinon `false` |
 | `NODE_ENV` | `production` active le cache-d'abord du build | — |
 
@@ -76,6 +78,20 @@ npm --prefix server install
 npm start
 ```
 Puis ouvrir `http://localhost:10000`. Pour générer le build minifié : `npm run build` (le serveur sert alors `dist/`).
+
+### Démarrage sous Windows (si `npm` est bloqué)
+PowerShell peut refuser les scripts (`npm.ps1`) et afficher *« l'exécution de scripts est désactivée sur ce système »* ; le serveur ne démarre alors pas et le navigateur montre une **page blanche**. Trois parade- feu, du plus simple au plus pérenne :
+```powershell
+# A) Lancer Node directement (aucun script PowerShell)
+node server/server.js
+
+# B) Contourner le wrapper .ps1 en utilisant npm.cmd
+npm.cmd start
+
+# C) Autoriser les scripts pour l'utilisateur courant (sans administrateur)
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+Une fois le serveur lancé, si l'ancienne page reste blanche : vider le **cache du Service Worker** (`Ctrl+Shift+R`, ou DevTools → Application → *Unregister* + *Clear site data*), ou ouvrir en navigation privée.
 
 ## Auto-hébergement avec Docker
 La façon la plus simple de déployer TRIPA chez vous, **sans aucun service externe** (base SQLite persistée dans un volume).
@@ -101,7 +117,7 @@ docker compose down               # arrêter (les données restent dans le volum
 docker volume ls                  # volume « tripa_data » = base SQLite
 ```
 
-Les **données survivent** aux redémarrages (volume `tripa-data` monté sur `/app/server/data`). Pour utiliser **Turso** à la place, renseignez `TURSO_DATABASE_URL` et `TURSO_AUTH_TOKEN` dans `.env`.
+Les **données survivent** aux redémarrages (volume `tripa-data` monté sur `/app/server/data`). Pour externaliser la base, renseignez `DATABASE_URL` (Supabase/Postgres) ou `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` dans `.env`.
 
 ## HTTPS/TLS en une commande (Caddy)
 `docker-compose.https.yml` ajoute **Caddy** comme reverse proxy devant TRIPA : **TLS automatique** (Let's Encrypt en production, certificat interne pour `localhost`), HTTP→HTTPS, en-têtes de sécurité. TRIPA **n'expose aucun port public** (seuls 80/443 de Caddy sortent), et le cookie passe en `COOKIE_SECURE=true`.
@@ -172,8 +188,8 @@ COOKIE_SECURE=true
 JWT_SECRET=<secret long et aléatoire>
 ```
 
-## Déploiement managé (Render)
-Le dépôt contient `Dockerfile` et `render.yaml`. Sur Render : créez un service **Docker** à partir du dépôt, puis définissez dans le tableau de bord `JWT_SECRET`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `SUPER_ADMIN_PASSWORD` (le plan gratuit sert l'URL `/` comme sonde de santé ; `/api/health` est aussi disponible).
+## Déploiement managé (Render + Supabase)
+Le dépôt contient `Dockerfile` et `render.yaml`. Base de données conseillée : **Supabase** (Postgres gratuit, sans carte bancaire). Sur Render : créez un service **Docker** à partir du dépôt (ou via le Blueprint `render.yaml`), puis définissez dans le tableau de bord `JWT_SECRET`, `DATABASE_URL` (chaîne de connexion Postgres Supabase, Settings → Database → Connection string) et `SUPER_ADMIN_PASSWORD` (le plan gratuit sert l'URL `/` comme sonde de santé ; `/api/health` est aussi disponible). Turso reste supporté via `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` si `DATABASE_URL` est vide.
 
 ## Rôles et comptes
 - **Super Admin** — `superadmin@tripa.com`, mot de passe par défaut `tripa-super-2026` (**à changer** dans Réglages). Voit et gère toutes les associations.
