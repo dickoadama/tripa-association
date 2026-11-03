@@ -1,0 +1,65 @@
+{
+  "version": 3,
+  "exported_at": "2026-11-03T12:44:47.511Z",
+  "entities": {
+    "adherents": [
+      {
+        "nom": "Diallo",
+        "prenom": "Amadou",
+        "email": "",
+        "telephone": "+22300000000",
+        "categorie": "membre",
+        "statut": "actif",
+        "date_adhesion": "",
+        "note": "",
+        "id": "7dc59d85-65c1-4a9d-8b4f-61afa2e8b2fa",
+        "admin_id": "f3230da7-8f95-4053-bf34-e61f274ea3c7",
+        "created_at": "2026-11-02T17:22:29.110Z"
+      },
+      {
+        "nom": "Traore",
+        "prenom": "Fatou",
+        "email": "",
+        "telephone": "",
+        "categorie": "membre",
+        "statut": "actif",
+        "date_adhesion": "",
+        "note": "",
+        "id": "adbb6d82-fa74-4faa-b95a-dbb929eb904c",
+        "admin_id": "f3230da7-8f95-4053-bf34-e61f274ea3c7",
+        "created_at": "2026-11-02T17:54:54.606Z"
+      }
+    ],
+    "cotisations": [],
+    "evenements": [],
+    "activites": [],
+    "communications": [],
+    "achats": [],
+    "documents": [],
+    "taches": []
+  },
+  "users": [
+    {
+      "id": "f3230da7-8f95-4053-bf34-e61f274ea3c7",
+      "email": "superadmin@tripa.com",
+      "nom": "Super",
+      "prenom": "Admin",
+      "telephone": "",
+      "asso_type": "",
+      "role": "super_admin",
+      "status": "active",
+      "created_at": "2026-11-02T17:22:14.411Z"
+    },
+    {
+      "id": "4b822161-5226-48bd-ba0c-f1eee5ac4db4",
+      "email": "demo@tripa.com",
+      "nom": "Demo",
+      "prenom": "Test",
+      "telephone": "",
+      "asso_type": "",
+      "role": "admin",
+      "status": "pending",
+      "created_at": "2026-11-02T17:22:40.149Z"
+    }
+  ]
+}

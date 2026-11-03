@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRIPA — Connexion</title>
+  <title>TRIPA — Déverrouillage</title>
   <link rel="stylesheet" href="css/app.css">
   <script src="js/prefs.js"></script>
   <link rel="manifest" href="manifest.webmanifest">
@@ -16,13 +16,13 @@
     <!-- Panneau de marque -->
     <section class="auth__brand">
       <div class="auth__logo"><span class="mark"><i data-lucide="shield-check"></i></span> TRIPA</div>
-      <p class="auth__lead">La plateforme simple et sécurisée pour piloter votre association&nbsp;: adhérents, cotisations, événements, activités et documents.</p>
+      <p class="auth__lead">La plateforme simple pour piloter votre association&nbsp;: adhérents, cotisations, événements, activités et documents.</p>
       <div class="auth__features">
         <div class="feature"><span class="fi"><i data-lucide="users"></i></span><div><b>Gestion des adhérents</b><span>Fiches, statuts et cotisations suivis en temps réel.</span></div></div>
-        <div class="feature"><span class="fi"><i data-lucide="wallet"></i></span><div><b>Cotisations & finances</b><span>Encaissements, relances et tableau de bord chiffré.</span></div></div>
-        <div class="feature"><span class="fi"><i data-lucide="calendar"></i></span><div><b>Événements & activités</b><span>Planification et communication centralisées.</span></div></div>
+        <div class="feature"><span class="fi"><i data-lucide="wallet"></i></span><div><b>Cotisations &amp; finances</b><span>Encaissements, relances et tableau de bord chiffré.</span></div></div>
+        <div class="feature"><span class="fi"><i data-lucide="calendar"></i></span><div><b>Événements &amp; activités</b><span>Planification et communication centralisées.</span></div></div>
       </div>
-      <p class="auth__brandfoot">Auto-hébergeable · Données chez vous · Aucune dépendance externe</p>
+      <p class="auth__brandfoot">100&nbsp;% local · Aucune dépendance externe · Vos données restent dans ce navigateur</p>
     </section>
 
     <!-- Zone formulaire -->
@@ -32,32 +32,26 @@
       <div class="auth__card">
         <div class="auth__mobilelogo"><i data-lucide="shield-check" style="width:22px;height:22px;"></i> TRIPA</div>
         <p class="auth__eyebrow">Espace administration</p>
-        <h1>Connexion</h1>
-        <p class="auth__sub">Accédez à votre tableau de bord.</p>
+        <h1>Déverrouillage</h1>
+        <p class="auth__sub">Saisissez votre code d'accès local.</p>
 
         <div class="auth__alert" id="alert"><i data-lucide="alert-circle"></i><span id="alertMsg"></span></div>
 
         <form id="login-form" novalidate>
-          <div class="field" data-field="email">
-            <label class="label" for="email">Email</label>
-            <span class="input-icon"><i data-lucide="mail"></i>
-              <input class="input" type="email" id="email" placeholder="vous@exemple.com" required autocomplete="username"></span>
-            <span class="field__msg"></span>
-          </div>
           <div class="field" data-field="password">
-            <label class="label" for="password">Mot de passe</label>
+            <label class="label" for="password">Code d'accès</label>
             <span class="input-icon has-toggle"><i data-lucide="lock"></i>
-              <input class="input" type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
-              <button type="button" class="pw-toggle" data-target="password" aria-label="Afficher le mot de passe"><i data-lucide="eye"></i></button></span>
+              <input class="input" type="password" id="password" placeholder="••••••••" required autocomplete="current-password" autofocus>
+              <button type="button" class="pw-toggle" data-target="password" aria-label="Afficher le code"><i data-lucide="eye"></i></button></span>
             <span class="field__msg"></span>
           </div>
           <div class="auth__row">
-            <label class="check"><input type="checkbox" id="remember"> Se souvenir de moi</label>
-            <a href="#" id="forgot">Mot de passe oublié&nbsp;?</a>
+            <span class="muted" style="font-size:13px;">Mode hors-ligne</span>
+            <a href="#" id="forgot">Code oublié&nbsp;?</a>
           </div>
-          <button class="btn btn--primary btn--block" type="submit"><i data-lucide="log-in"></i> Se connecter</button>
+          <button class="btn btn--primary btn--block" type="submit"><i data-lucide="log-in"></i> Déverrouiller</button>
         </form>
-        <p class="auth__switch">Pas encore de compte&nbsp;? <a href="register.html">Créer un compte</a></p>
+        <p class="auth__switch">Première utilisation&nbsp;? <a href="register.html">Définir votre code</a></p>
       </div>
     </section>
   </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRIPA — Inscription</title>
+  <title>TRIPA — Définir votre code</title>
   <link rel="stylesheet" href="css/app.css">
   <script src="js/prefs.js"></script>
   <link rel="manifest" href="manifest.webmanifest">
@@ -15,14 +15,14 @@
   <div class="auth">
     <!-- Panneau de marque -->
     <section class="auth__brand">
-      <div class="auth__logo"><span class="mark"><i data-lucide="user-plus"></i></span> Rejoignez TRIPA</div>
-      <p class="auth__lead">Créez le compte de votre association en quelques secondes. Votre accès sera ensuite validé par le Super Admin.</p>
+      <div class="auth__logo"><span class="mark"><i data-lucide="user-plus"></i></span> Configurer TRIPA</div>
+      <p class="auth__lead">Définissez votre code d'accès local et les informations de votre association. Tout reste dans ce navigateur, rien ne sort de votre machine.</p>
       <div class="auth__features">
-        <div class="feature"><span class="fi"><i data-lucide="shield"></i></span><div><b>Vos données vous appartiennent</b><span>Hébergez TRIPA chez vous, rien ne sort de votre serveur.</span></div></div>
-        <div class="feature"><span class="fi"><i data-lucide="database"></i></span><div><b>Clôt &amp; sauvegarde</b><span>Chaque association est isolée, export/restauration possible.</span></div></div>
+        <div class="feature"><span class="fi"><i data-lucide="shield"></i></span><div><b>Vos données vous appartiennent</b><span>100&nbsp;% local, aucune dépendance externe.</span></div></div>
+        <div class="feature"><span class="fi"><i data-lucide="database"></i></span><div><b>Export &amp; restauration</b><span>Sauvegarde JSON en un clic depuis Réglages&nbsp;&rarr;&nbsp;Données.</span></div></div>
         <div class="feature"><span class="fi"><i data-lucide="bell"></i></span><div><b>Prêt à l'emploi</b><span>Tableau de bord, journal d'activité et gestion complète.</span></div></div>
       </div>
-      <p class="auth__brandfoot">Auto-hébergeable · Données chez vous · Aucune dépendance externe</p>
+      <p class="auth__brandfoot">100&nbsp;% local · Aucune dépendance externe · Vos données restent dans ce navigateur</p>
     </section>
 
     <!-- Zone formulaire -->
@@ -31,8 +31,8 @@
       <button class="iconbtn auth__theme" id="themeBtn" title="Changer de thème" aria-label="Changer de thème"><i data-lucide="monitor"></i></button>
       <div class="auth__card">
         <div class="auth__mobilelogo"><i data-lucide="user-plus" style="width:22px;height:22px;"></i> TRIPA</div>
-        <p class="auth__eyebrow">Nouveau compte</p>
-        <h1>Créer un compte</h1>
+        <p class="auth__eyebrow">Premier lancement</p>
+        <h1>Définir votre code</h1>
         <p class="auth__sub">Renseignez les informations de votre association.</p>
 
         <div class="auth__alert" id="alert"><i data-lucide="alert-circle"></i><span id="alertMsg"></span></div>
@@ -49,9 +49,8 @@
             </div>
           </div>
           <div class="field" data-field="email">
-            <label class="label" for="email">Email <span class="req">*</span></label>
-            <span class="input-icon"><i data-lucide="mail"></i><input class="input" type="email" id="email" placeholder="vous@exemple.com" required autocomplete="username"></span>
-            <span class="field__msg"></span>
+            <label class="label" for="email">Email <span class="muted" style="font-weight:400;">(facultatif)</span></label>
+            <span class="input-icon"><i data-lucide="mail"></i><input class="input" type="email" id="email" placeholder="vous@exemple.com" autocomplete="email"></span>
           </div>
           <div class="field" data-field="phone">
             <label class="label" for="phone">Téléphone</label>
@@ -65,23 +64,23 @@
               </select></span>
           </div>
           <div class="field" data-field="password">
-            <label class="label" for="password">Mot de passe <span class="req">*</span></label>
+            <label class="label" for="password">Code d'accès <span class="req">*</span></label>
             <span class="input-icon has-toggle"><i data-lucide="lock"></i>
-              <input class="input" type="password" id="password" placeholder="6 caractères minimum" required minlength="6" autocomplete="new-password">
-              <button type="button" class="pw-toggle" data-target="password" aria-label="Afficher le mot de passe"><i data-lucide="eye"></i></button></span>
+              <input class="input" type="password" id="password" placeholder="4 caractères minimum" required minlength="4" autocomplete="new-password">
+              <button type="button" class="pw-toggle" data-target="password" aria-label="Afficher le code"><i data-lucide="eye"></i></button></span>
             <div class="strength" id="strength" hidden><div class="strength__bar"><div class="strength__fill"></div></div><div class="strength__label"></div></div>
             <span class="field__msg"></span>
           </div>
           <div class="field" data-field="confirm-password">
             <label class="label" for="confirm-password">Confirmer <span class="req">*</span></label>
             <span class="input-icon has-toggle"><i data-lucide="lock"></i>
-              <input class="input" type="password" id="confirm-password" placeholder="Retapez le mot de passe" required autocomplete="new-password">
-              <button type="button" class="pw-toggle" data-target="confirm-password" aria-label="Afficher le mot de passe"><i data-lucide="eye"></i></button></span>
+              <input class="input" type="password" id="confirm-password" placeholder="Retapez le code" required autocomplete="new-password">
+              <button type="button" class="pw-toggle" data-target="confirm-password" aria-label="Afficher le code"><i data-lucide="eye"></i></button></span>
             <span class="field__msg"></span>
           </div>
-          <button class="btn btn--primary btn--block" type="submit"><i data-lucide="user-plus"></i> Créer mon compte</button>
+          <button class="btn btn--primary btn--block" type="submit"><i data-lucide="key-round"></i> Définir mon code</button>
         </form>
-        <p class="auth__switch">Déjà inscrit&nbsp;? <a href="index.html">Se connecter</a></p>
+        <p class="auth__switch">Code déjà défini&nbsp;? <a href="index.html">Déverrouiller</a></p>
       </div>
     </section>
   </div>

@@ -1,6 +1,12 @@
-/* TRIPA — Auth (login / register) : nouveau modèle d'interaction.
- * Feedback en ligne (plus d'alert()), bascule de visibilité du mot de passe,
- * jauge de robustesse, état de chargement, sélecteur de thème. */
+/* TRIPA — Auth (login / register) en mode statique 100 % local.
+ * Le formulaire de « connexion » est en réalité un déverrouillage par code
+ * d'accès local (hash SHA-256 stocké dans localStorage). Le formulaire
+ * d'inscription définit ce code et renseigne le profil de l'association.
+ *
+ * Aucun email, aucun rôle distant, aucune validation Super Admin :
+ *   - Si aucun code n'est défini, index.html redirige vers register.html.
+ *   - Si un code existe déjà, register.html redirige vers index.html.
+ */
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
 
@@ -9,8 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeIconName = (t) => t === 'dark' ? 'moon' : (t === 'auto' ? 'monitor' : 'sun');
   function paintThemeIcon() {
     if (!themeBtn || !window.TRIPA) return;
-    const name = themeIconName(TRIPA.PREFS.get().theme);
-    themeBtn.innerHTML = '<i data-lucide="' + name + '"></i>';
+    themeBtn.innerHTML = '<i data-lucide="' + themeIconName(TRIPA.PREFS.get().theme) + '"></i>';
     if (window.lucide) lucide.createIcons(themeBtn);
   }
   if (themeBtn) { themeBtn.addEventListener('click', () => { TRIPA.PREFS.cycleTheme(); paintThemeIcon(); }); paintThemeIcon(); }
@@ -43,16 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!f) return; f.classList.add('is-invalid');
     const m = f.querySelector('.field__msg'); if (m) m.textContent = msg;
   }
-  function clearInvalid() {
-    document.querySelectorAll('.field.is-invalid').forEach(f => f.classList.remove('is-invalid'));
-  }
-  function loading(btn, on) { if (btn) btn.classList.toggle('is-loading', on); if (btn) btn.disabled = on; }
+  function clearInvalid() { document.querySelectorAll('.field.is-invalid').forEach(f => f.classList.remove('is-invalid')); }
+  function loading(btn, on) { if (btn) { btn.classList.toggle('is-loading', on); btn.disabled = on; } }
 
-  /* ---- Mot de passe oublié (démo) ---- */
+  /* ---- « Code oublié » : instructions de reset DevTools ---- */
   const forgot = document.getElementById('forgot');
   if (forgot) forgot.addEventListener('click', e => {
     e.preventDefault();
-    showAlert('ok', 'Réinitialisation non disponible en auto-hébergement : contactez votre Super Admin.');
+    showAlert('ok', 'Réinitialiser : ouvrez DevTools (F12) → Console, tapez localStorage.removeItem("tripa_key") puis rechargez. Vos données restent dans le navigateur.');
   });
 
   /* ---- Jauge de robustesse (register) ---- */
@@ -72,64 +75,67 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---- Connexion ---- */
+  /* ---- Aiguillage : première visite vs visite suivante ---- */
+  const isLogin = !!document.getElementById('login-form');
+  const isRegister = !!document.getElementById('register-form');
+  if (isLogin && !API.hasKey()) { location.href = 'register.html'; return; }
+  if (isRegister && API.hasKey()) { location.href = 'index.html'; return; }
+
+  /* ---- Déverrouillage ---- */
   const loginForm = document.getElementById('login-form');
   if (loginForm) loginForm.addEventListener('submit', async e => {
     e.preventDefault(); clearInvalid(); hideAlert();
-    const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
-    let ok = true;
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { invalid('email', 'Adresse email invalide.'); ok = false; }
-    if (!password) { invalid('password', 'Mot de passe requis.'); ok = false; }
-    if (!ok) return;
+    if (!password) { invalid('password', 'Code requis.'); return; }
     const btn = loginForm.querySelector('button[type=submit]');
     loading(btn, true);
-    const remember = document.getElementById('remember')?.checked || false;
-    await handleLogin(email, password, (k, m) => { loading(btn, false); showAlert(k, m); }, remember);
+    await handleLogin(null, password, (k, m) => { loading(btn, false); showAlert(k, m); });
   });
 
-  /* ---- Inscription ---- */
+  /* ---- Définition du code d'accès + profil ---- */
   const registerForm = document.getElementById('register-form');
   if (registerForm) registerForm.addEventListener('submit', async e => {
     e.preventDefault(); clearInvalid(); hideAlert();
-    const email = document.getElementById('email').value.trim().toLowerCase();
     const pwd = document.getElementById('password').value;
     const confirmPwd = document.getElementById('confirm-password').value;
     let ok = true;
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { invalid('email', 'Adresse email invalide.'); ok = false; }
-    if (pwd.length < 6) { invalid('password', '6 caractères minimum.'); ok = false; }
-    if (pwd !== confirmPwd) { invalid('confirm-password', 'Les mots de passe ne correspondent pas.'); ok = false; }
-    if (isSuperAdminEmail(email)) { showAlert('error', 'Cette adresse est réservée au Super Admin.'); ok = false; }
+    if (pwd.length < 4) { invalid('password', '4 caractères minimum.'); ok = false; }
+    if (pwd !== confirmPwd) { invalid('confirm-password', 'Les codes ne correspondent pas.'); ok = false; }
     if (!ok) return;
     const btn = registerForm.querySelector('button[type=submit]');
     loading(btn, true);
     await handleRegister({
-      email, password: pwd,
+      password: pwd,
       nom: (document.getElementById('lastname')?.value || '').trim(),
       prenom: (document.getElementById('firstname')?.value || '').trim(),
+      email: (document.getElementById('email')?.value || '').trim().toLowerCase(),
       telephone: (document.getElementById('phone')?.value || '').trim(),
       asso_type: document.getElementById('asso-type')?.value || ''
     }, (k, m) => { loading(btn, false); showAlert(k, m); });
   });
 });
 
-async function handleLogin(email, password, feedback, remember) {
+/* ---------- Handlers ---------- */
+async function handleLogin(_email, password, feedback) {
   feedback = feedback || ((k, m) => alert(m));
-  const { data, error } = await loginUser(email, password, remember);
-  if (error) { feedback('error', 'Connexion impossible : ' + error.message); return; }
-  const profile = data && data.profile;
-  if (!profile) { feedback('error', 'Aucun compte trouvé.'); return; }
-  if (profile.role === 'super_admin') { setSessionToken(data.token); saveSessionProfile(profile); window.location.href = 'admin-management.html'; return; }
-  if (profile.status === 'pending') { feedback('error', 'Compte en attente de validation par le Super Admin.'); return; }
-  if (profile.status === 'suspended') { feedback('error', 'Votre compte a été suspendu.'); return; }
-  if (profile.status === 'rejected') { feedback('error', 'Votre inscription a été rejetée.'); return; }
-  setSessionToken(data.token); saveSessionProfile(profile); window.location.href = 'dashboard.html';
+  const { data, error } = await API.loginUser(null, password);
+  if (error) { feedback('error', error.message || 'Échec de déverrouillage.'); return; }
+  if (!data || !(data.user || data.profile)) { feedback('error', 'Aucun compte trouvé.'); return; }
+  const back = new URLSearchParams(location.search).get('next') || 'dashboard.html';
+  window.location.href = back;
 }
 
 async function handleRegister(payload, feedback) {
   feedback = feedback || ((k, m) => alert(m));
-  const { error } = await registerUser(payload);
-  if (error) { feedback('error', 'Inscription impossible : ' + error.message); return; }
-  feedback('ok', 'Compte créé ! En attente de validation par le Super Admin…');
-  setTimeout(() => { window.location.href = 'index.html'; }, 1700);
+  const { error } = await API.registerUser({ password: payload.password });
+  if (error) { feedback('error', error.message || 'Échec de la définition du code.'); return; }
+  if (payload.nom || payload.prenom || payload.email || payload.telephone || payload.asso_type) {
+    await API.updateOwnProfile({
+      nom: payload.nom, prenom: payload.prenom,
+      email: payload.email, telephone: payload.telephone,
+      asso_type: payload.asso_type
+    });
+  }
+  feedback('ok', 'Code défini. Ouverture du tableau de bord…');
+  setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
 }
