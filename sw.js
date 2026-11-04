@@ -2,7 +2,7 @@
  * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne), puis mise à jour
  *   en tâche de fond à chaque requête réseau réussie.
  * - Aucune API distante : les données vivent dans localStorage, consultables hors-ligne. */
-const CACHE = 'tripa-v13';
+const CACHE = 'tripa-v14';
 const SHELL = [
   './index.html', './register.html', './dashboard.html', './entity.html',
   './settings.html', './profile.html', './help.html', './activity.html',

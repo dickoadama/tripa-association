@@ -51,9 +51,11 @@ npm run serve   # http://localhost:10007 (http-server, anti-cache activé)
 ```
 
 ## Publication
-Deux options :
-1. **Brut** : publier la racine du dépôt telle quelle (GitHub Pages, Netlify, n'importe quel hébergeur statique).
-2. **Minifié** : `npm run build` génère `dist/` (Terser + Clean-CSS, noms de fonctions préservés) à publier comme racine du site.
+GitHub Pages est alimenté par le workflow **Deploy GitHub Pages** (`.github/workflows/deploy-pages.yml`) : à chaque poussée sur `main`, `npm run build` est exécuté et **seul `dist/` est publié**. Le code publié est minifié, les variables internes renommées, les commentaires retirés, et un script garde-fou bloque clic droit / F12 / Ctrl+U dans les pages servies.
+
+En local : `npm run build` produit le même `dist/` ; la racine reste en source lisible pour le développement.
+
+> Note : sur un site 100 % statique, le code reste téléchargeable par nature — ces mesures rendent la lecture fastidieuse (dissuasion), pas impossible. Le dépôt Git lui-même contient la source lisible : ne le rendez public que si vous l'acceptez.
 
 Après toute modification d'assets, **incrémenter la version du cache** dans `sw.js` (`tripa-vN`) pour forcer l'invalidation chez les utilisateurs ; les entrées `SHELL` du pré-cache doivent exister (`addAll` échoue atomiquement sinon).
 

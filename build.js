@@ -1,9 +1,14 @@
-/* TRIPA — Build frontend : copie les fichiers de la racine → dist/ en minifiant JS et CSS.
- * - Terser avec mangle:false : préserve les noms de fonctions globales partagées
- *   entre les <script> classiques (fetchAll, esc, ENTITY_SCHEMA, openForm...).
+/* TRIPA — Build de publication : copie les fichiers de la racine → dist/ en rendant
+ * le code source illisible pour les visiteurs du site publié.
+ * - Terser : mangle=true renomme les variables/arguments des portées INTERNES ;
+ *   les noms déclarés au premier niveau (globals partagés entre <script> : fetchAll,
+ *   esc, ENTITY_SCHEMA, openForm, signOut…) restent intacts (toplevel:false par défaut).
+ *   compress: drop_console/drop_debugger suppriment traces et points d'arrêt.
  * - Clean-CSS : compacte le CSS.
+ * - HTML : commentaires retirés, whitespace compacté, script garde-fou injecté
+ *   (bloque clic droit / F12 / Ctrl+U / Ctrl+Shift+I) — uniquement dans dist/.
  * Le dossier dist/ obtenu est un site 100 % statique, publiable tel quel
- * (GitHub Pages, Netlify, n'importe quel hébergeur statique). */
+ * (GitHub Pages via Actions, Netlify, n'importe quel hébergeur statique). */
 const fs = require('fs');
 const path = require('path');
 const { minify } = require('terser');
@@ -18,6 +23,21 @@ const FRONTEND_ITEMS = [
   'settings.html', 'profile.html', 'help.html', 'activity.html',
   'css', 'js', 'icons', 'sw.js', 'manifest.webmanifest'
 ];
+
+/* Garde-fou injecté dans le HTML publié : dissuade l'inspection du code.
+ * (Deterrent honnête : le code d'un site statique reste téléchargeable,
+ * mais il sort illisible et ces raccourcis sont neutralisés.) */
+const GUARD = '<script>(function(){function no(){var d=document.createElement("div");d.textContent="Le code source de TRIPA est prot\u00e9g\u00e9.";d.setAttribute("style","position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 16px;border-radius:8px;z-index:99999;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3)");document.body.appendChild(d);setTimeout(function(){d.remove()},1800)}document.addEventListener("contextmenu",function(e){e.preventDefault();no()});document.addEventListener("keydown",function(e){var b=e.key==="F12"||(e.ctrlKey&&e.shiftKey&&/^[ijcICJ]$/.test(e.key))||(e.ctrlKey&&!e.shiftKey&&/^[uUsS]$/.test(e.key));if(b){e.preventDefault();e.stopPropagation();no()}});})();</script>';
+
+function minifyHtml(html) {
+  return html
+    .replace(/<!--(?!\[if)[\s\S]*?-->/g, '')            // commentaires HTML
+    .replace(/[ \t]+(\r?\n)[ \t]*/g, '$1')              // indentation inutile
+    .replace(/(\r?\n){2,}/g, '\n')                      // lignes blanches
+    .replace(/\n/g, ' ')                                // tout sur une ligne
+    .replace(/>\s+</g, '><')                            // whitespace entre balises
+    .replace(/<\/body>/i, GUARD + '</body>');           // garde-fou
+}
 
 function copyItem(src, dest) {
   const stat = fs.statSync(src);
@@ -48,17 +68,23 @@ async function walk(dir, fn) {
     copyItem(src, path.join(OUT, item));
   }
 
-  let jsCount = 0, cssCount = 0;
+  let jsCount = 0, cssCount = 0, htmlCount = 0;
   await walk(OUT, async (file) => {
     const ext = path.extname(file).toLowerCase();
     if (ext === '.js') {
       const code = fs.readFileSync(file, 'utf8');
-      const res = await minify(code, { mangle: false, compress: true, format: { comments: false } });
+      const res = await minify(code, {
+        mangle: true,
+        compress: { passes: 3, drop_console: true, drop_debugger: true },
+        format: { comments: false }
+      });
       if (res && res.code) { fs.writeFileSync(file, res.code); jsCount++; }
     } else if (ext === '.css') {
       const out = new CleanCSS({ level: 2 }).minify(fs.readFileSync(file, 'utf8'));
       if (out && out.styles) { fs.writeFileSync(file, out.styles); cssCount++; }
+    } else if (ext === '.html') {
+      fs.writeFileSync(file, minifyHtml(fs.readFileSync(file, 'utf8'))); htmlCount++;
     }
   });
-  console.log(`Build terminé : ${jsCount} fichier(s) JS et ${cssCount} CSS minifiés dans dist/`);
+  console.log(`Build terminé : ${jsCount} JS manglés, ${cssCount} CSS et ${htmlCount} HTML minifiés (+ garde-fou) dans dist/`);
 })().catch((e) => { console.error('Échec du build :', e && e.message ? e.message : e); process.exit(1); });

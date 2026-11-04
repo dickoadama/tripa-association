@@ -7,9 +7,14 @@
     "build": "node build.js",
     "serve": "npx --yes http-server -p 10007 -c-1 ."
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "clean-css": "^5.3.3",
     "terser": "^5.36.0"
+  },
+  "dependencies": {
+    "tripa": "file:"
   }
 }
