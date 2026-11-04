@@ -1,5 +1,5 @@
 /* TRIPA — Mon profil : vue d'ensemble du compte + activité (lecture seule).
- * L'édition des coordonnées et du mot de passe se fait dans Réglages. */
+ * L'édition des coordonnées et du code d'accès se fait dans Réglages. */
 document.addEventListener('DOMContentLoaded', async () => {
   const profile = await requireAuth(['active']); if (!profile) return;
   buildLayout('profile', 'Mon profil');
@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const initials = ((profile.prenom?.[0] || '') + (profile.nom?.[0] || '')).toUpperCase() || 'AD';
   const fullName = [profile.prenom, profile.nom].filter(Boolean).join(' ') || 'Admin';
-  const roleLabel = profile.role === 'super_admin' ? 'Super Admin' : 'Administrateur';
-  const roleBadge = profile.role === 'super_admin' ? 'info' : 'success';
+  const roleLabel = 'Administrateur';
+  const roleBadge = 'success';
   const statusLabel = { active: 'Actif', pending: 'En attente', suspended: 'Suspendu', rejected: 'Rejeté' }[profile.status] || humanize(profile.status);
   const statusBadge = { active: 'success', pending: 'warning', suspended: 'danger', rejected: 'muted' }[profile.status] || 'muted';
   const since = profile.created_at ? formatDate(profile.created_at) : '—';
@@ -52,9 +52,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     </div>
 
     <div class="card">
-      <div class="card__header"><h3>Sessions &amp; sécurité</h3></div>
+      <div class="card__header"><h3>Sécurité</h3></div>
       <div class="card__body">
-        <p class="muted" style="font-size:14px;">🔒 Votre session est gérée par un cookie sécurisé (<code>httpOnly</code>) émis par le serveur : aucun mot de passe ni jeton n'est stocké dans ce navigateur. Pour changer votre mot de passe, rendez-vous dans <a href="settings.html">Réglages → Sécurité</a>.</p>
+        <p class="muted" style="font-size:14px;">🔒 Vos données et le code d'accès (stocké sous forme d'empreinte SHA-256) vivent uniquement dans ce navigateur : rien n'est envoyé vers un serveur. Pour changer votre code d'accès, rendez-vous dans <a href="settings.html">Réglages → Sécurité</a>.</p>
       </div>
     </div>`;
 

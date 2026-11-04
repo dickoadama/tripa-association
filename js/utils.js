@@ -248,7 +248,6 @@ async function loadNotifications(){
 /* ---------- Mise en page ---------- */
 function buildLayout(activeKey,pageTitle){
   const profile=getSessionProfile()||{};
-  const isSuper=profile.role==='super_admin';
   const prefs=window.TRIPA&&TRIPA.PREFS?TRIPA.PREFS.get():{theme:'light',notifications:true};
   const initials=((profile.prenom?.[0]||'')+(profile.nom?.[0]||'')).toUpperCase()||'AD';
   const fullName=[profile.prenom,profile.nom].filter(Boolean).join(' ')||'Admin';
@@ -256,13 +255,12 @@ function buildLayout(activeKey,pageTitle){
 
   const linksMain=NAV.map(n=>navLink(n,activeKey)).join('');
   const linksFoot=NAV_FOOT.map(n=>navLink(n,activeKey)).join('');
-  const superLink=isSuper?`<a class="nav-link${activeKey==='admin'?' is-active':''}" href="admin-management.html"><i data-lucide="shield-check"></i><span>Console Super Admin</span></a>`:'';
 
   const sidebarHost=document.getElementById('sidebarHost');
   if(sidebarHost){ sidebarHost.className='sidebar';
     sidebarHost.innerHTML=`<div class="sidebar__logo">TRIPA</div>
       <div class="sidebar__section">Gestion</div><nav class="sidebar__nav">${linksMain}</nav>
-      <div class="sidebar__section">Compte</div><nav class="sidebar__nav">${superLink}${linksFoot}</nav>
+      <div class="sidebar__section">Compte</div><nav class="sidebar__nav">${linksFoot}</nav>
       <div class="side-user"><div class="avatar">${esc(initials)}</div>
         <div style="min-width:0;flex:1;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nameHtml}</div>
         <div class="muted" style="font-size:12px;">${emailHtml}</div></div>

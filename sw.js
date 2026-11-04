@@ -1,8 +1,8 @@
 /* TRIPA — Service Worker : coquille applicative hors-ligne.
- * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne).
- * - API /api/* : réseau-toujours ; en cas d'échec, renvoie une erreur 'hors-ligne'
- *   pour que l'interface affiche un bandeau dédié (pas de données périmées silencieuses). */
-const CACHE = 'tripa-v12';
+ * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne), puis mise à jour
+ *   en tâche de fond à chaque requête réseau réussie.
+ * - Aucune API distante : les données vivent dans localStorage, consultables hors-ligne. */
+const CACHE = 'tripa-v13';
 const SHELL = [
   './index.html', './register.html', './dashboard.html', './entity.html',
   './settings.html', './profile.html', './help.html', './activity.html',
@@ -23,14 +23,6 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-
-  if (url.pathname.includes('/api/')) {
-    e.respondWith(
-      fetch(req).catch(() => new Response(JSON.stringify({ data: null, error: { message: 'Hors-ligne.', status: 0 } }),
-        { status: 503, headers: { 'Content-Type': 'application/json' } }))
-    );
-    return;
-  }
 
   if (url.origin !== location.origin) return; // requête externe : laissée au navigateur (aucune désormais, tout est local)
 

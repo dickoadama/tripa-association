@@ -1,5 +1,5 @@
 /* TRIPA — Moteur CRUD générique + analyses (entity.html?t=<entité>).
- * Recherche/tri/pagination délégués au serveur. Export/import CSV. Sauvegarde. */
+ * Recherche/tri/pagination traités localement (localStorage). Export/import CSV. Sauvegarde. */
 let ENTITY_TYPE = '', ROWS = [], REF_MAPS = {}, EDITING_ID = null;
 let STATE = { search: '', sort: 'created_at', dir: 'desc', page: 1, perPage: 25, hasMore: false };
 function paramType(){ const t = new URLSearchParams(location.search).get('t'); return ENTITY_SCHEMA[t] ? t : 'adherents'; }

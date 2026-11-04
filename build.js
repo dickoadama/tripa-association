@@ -1,8 +1,9 @@
-/* TRIPA — Build frontend : copie les fichiers frontend (racine) → dist/ en minifiant JS et CSS.
+/* TRIPA — Build frontend : copie les fichiers de la racine → dist/ en minifiant JS et CSS.
  * - Terser avec mangle:false : préserve les noms de fonctions globales partagées
  *   entre les <script> classiques (fetchAll, esc, ENTITY_SCHEMA, openForm...).
  * - Clean-CSS : compacte le CSS.
- * Le serveur sert dist/ s'il existe, sinon la racine (mode dev). */
+ * Le dossier dist/ obtenu est un site 100 % statique, publiable tel quel
+ * (GitHub Pages, Netlify, n'importe quel hébergeur statique). */
 const fs = require('fs');
 const path = require('path');
 const { minify } = require('terser');
@@ -11,10 +12,10 @@ const CleanCSS = require('clean-css');
 const SRC = __dirname; // fichiers source à la racine du projet
 const OUT = path.join(__dirname, 'dist');
 
-// Fichiers et dossiers frontend à copier (exclut server/, node_modules/, scripts/, backups/…)
+// Fichiers et dossiers frontend à copier (exclut node_modules/, backups/, dist/…)
 const FRONTEND_ITEMS = [
   'index.html', 'register.html', 'dashboard.html', 'entity.html',
-  'admin-management.html', 'settings.html', 'profile.html', 'help.html', 'activity.html',
+  'settings.html', 'profile.html', 'help.html', 'activity.html',
   'css', 'js', 'icons', 'sw.js', 'manifest.webmanifest'
 ];
 

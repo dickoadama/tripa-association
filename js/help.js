@@ -16,9 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     ['Comment ajouter un élément ?', "Ouvrez le module voulu dans le menu de gauche, puis cliquez sur « Ajouter ». Le formulaire s'adapte automatiquement aux champs de l'entité. Les champs marqués d'un astérisque sont obligatoires."],
     ['Rechercher rapidement', "Utilisez la barre de recherche de l'en-tête (raccourci Ctrl+K) pour chercher dans tous vos modules à la fois, ou la recherche interne d'un tableau pour filtrer ses lignes."],
     ['Exporter mes données', "Dans chaque tableau, le bouton « Exporter » génère un fichier CSV. Dans Réglages → Données, vous pouvez télécharger une sauvegarde complète (JSON) et la restaurer."],
-    ['Fonctionner hors-ligne', "TRIPA est une application installable (PWA). Une fois ouverte en ligne, la coquille de l'application reste consultable hors-ligne ; les données exigent toutefois une connexion au serveur."],
-    ['Oubli de mot de passe', "Pour un compte administrateur, le Super Admin peut définir un mot de passe temporaire depuis sa console. Le Super Admin initial est défini par variable d'environnement côté serveur."],
-    ['Mes données sont-elles protégées ?', "La logique métier, l'accès à la base et les secrets vivent uniquement sur le serveur. L'authentification utilise un cookie sécurisé ; le navigateur ne conserve ni mot de passe ni jeton."]
+    ['Fonctionner hors-ligne', "TRIPA est une application installable (PWA). Toutes les données sont stockées dans votre navigateur : l'application fonctionne entièrement hors-ligne, aucune connexion n'est requise après la première ouverture."],
+    ['Oubli du code d’accès', "Le code d’accès est stocké sous forme d’empreinte chiffrée dans ce navigateur. En cas d’oubli : ouvrez DevTools (F12) → Console, tapez localStorage.removeItem('tripa_key') puis rechargez et définissez un nouveau code. Vos données restent intactes."],
+    ['Mes données sont-elles protégées ?', "Tout est local : vos données et l’empreinte chiffrée (SHA-256) du code d’accès ne quittent jamais ce navigateur. Aucun serveur, aucun compte en ligne. Pensez à exporter régulièrement une sauvegarde (Réglages → Données)."]
   ].map(([q, r], i) => `<details class="faq"><summary>${esc(q)}</summary><div class="faq__a">${esc(r)}</div></details>`).join('');
 
   content.innerHTML = `
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="card__header"><h3>À propos</h3></div>
         <div class="card__body">
           <div class="between" style="padding:6px 0;"><span class="muted">Version</span><strong>TRIPA 3.0</strong></div>
-          <div class="between" style="padding:6px 0;"><span class="muted">Architecture</span><strong>Client-serveur (Express + Turso)</strong></div>
+          <div class="between" style="padding:6px 0;"><span class="muted">Architecture</span><strong>100 % statique (localStorage)</strong></div>
           <div class="between" style="padding:6px 0;"><span class="muted">Interface</span><strong>HTML / CSS / JS natif</strong></div>
           <div class="between" style="padding:6px 0;"><span class="muted">Hors-ligne</span><strong>Application installable (PWA)</strong></div>
         </div>

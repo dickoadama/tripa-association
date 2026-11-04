@@ -2,12 +2,10 @@
   "name": "tripa",
   "version": "3.0.0",
   "private": true,
-  "description": "TRIPA — app backend Express + Turso. Build = minification du frontend.",
+  "description": "TRIPA — gestion d'association, application 100 % statique (HTML/CSS/JS + localStorage). Build = minification pour publication.",
   "scripts": {
     "build": "node build.js",
-    "start": "node server/server.js",
-    "dev": "node server/server.js",
-    "backup": "node scripts/backup.js"
+    "serve": "npx --yes http-server -p 10007 -c-1 ."
   },
   "engines": { "node": ">=18" },
   "devDependencies": {

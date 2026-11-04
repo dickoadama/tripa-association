@@ -168,8 +168,6 @@ const API = (() => {
     return { data: merged, error: null };
   }
 
-  function isSuperAdminEmail() { return false; }
-  async function requireSuperAdmin() { return true; }
   function hasKey() { return !!rawGet('key', null); }
   function isUnlocked() { return !!rawGet('unlocked', null); }
 
@@ -343,13 +341,6 @@ const API = (() => {
     return { data: { message: 'OK' }, error: null };
   }
 
-  /* ---------- Stubs Console Super Admin (retirée) ---------- */
-  async function getAllAdmins() { return { data: [], error: null }; }
-  async function createAdmin() { return { data: null, error: { message: 'Console Super Admin indisponible en mode statique.' } }; }
-  async function updateAdmin() { return { data: null, error: { message: 'Console Super Admin indisponible en mode statique.' } }; }
-  async function deleteAdmin() { return { data: null, error: { message: 'Console Super Admin indisponible en mode statique.' } }; }
-  async function approveAdmin() { return { data: null, error: { message: 'Console Super Admin indisponible en mode statique.' } }; }
-
   /* ---------- Guards de page ---------- */
   async function initAuth() { return true; }
 
@@ -372,16 +363,14 @@ const API = (() => {
 
   /* ---------- API publique ---------- */
   return {
-    API_BASE: '',
     appCmd,
     registerUser, loginUser, fetchCurrentUser, logoutUser, signOut,
     changePassword, updateOwnProfile,
-    isSuperAdminEmail, requireSuperAdmin, hasKey, isUnlocked,
+    hasKey, isUnlocked,
     initAuth, protectAll, requireAuth, redirectIfAuthed,
     getEntityDef, fetchAll, fetchById, insertRow, updateRow, deleteRow,
     fetchStats, fetchActivity,
-    fetchBackup, restoreBackup,
-    getAllAdmins, createAdmin, updateAdmin, deleteAdmin, approveAdmin
+    fetchBackup, restoreBackup
   };
 })();
 
@@ -399,7 +388,6 @@ if (typeof window !== 'undefined') {
     changePassword: API.changePassword, updateOwnProfile: API.updateOwnProfile,
     loginUser: API.loginUser, registerUser: API.registerUser,
     fetchCurrentUser: API.fetchCurrentUser, logoutUser: API.logoutUser, signOut: API.signOut,
-    isSuperAdminEmail: API.isSuperAdminEmail, requireSuperAdmin: API.requireSuperAdmin,
     initAuth: API.initAuth, protectAll: API.protectAll,
     requireAuth: API.requireAuth, redirectIfAuthed: API.redirectIfAuthed,
     getSessionProfile: () => (window.API && API.isUnlocked && API.isUnlocked()) ? JSON.parse(localStorage.getItem('tripa_profile') || 'null') : null,
