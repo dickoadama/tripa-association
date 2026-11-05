@@ -1,14 +1,14 @@
 /* TRIPA — Service Worker : coquille applicative hors-ligne.
  * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne), puis mise à jour
  *   en tâche de fond à chaque requête réseau réussie.
- * - Aucune API distante : les données vivent dans localStorage, consultables hors-ligne. */
-const CACHE = 'tripa-v14';
+ * - Requêtes Supabase (cross-origin) : jamais cachées, laissées au navigateur. */
+const CACHE = 'tripa-v16';
 const SHELL = [
   './index.html', './register.html', './dashboard.html', './entity.html',
-  './settings.html', './profile.html', './help.html', './activity.html',
+  './admin-management.html', './settings.html', './profile.html', './help.html', './activity.html',
   './css/app.css', './manifest.webmanifest', './icons/icon.svg', './icons/icon-maskable.svg',
   './js/api.js', './js/utils.js', './js/prefs.js', './js/auth.js', './js/entity.js', './js/lucide.js', './js/chart.js',
-  './js/settings.js', './js/profile.js', './js/help.js', './js/activity.js', './js/pwa.js'
+  './js/admin-management.js', './js/settings.js', './js/profile.js', './js/help.js', './js/activity.js', './js/pwa.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -24,7 +24,7 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  if (url.origin !== location.origin) return; // requête externe : laissée au navigateur (aucune désormais, tout est local)
+  if (url.origin !== location.origin) return; // requête externe (Supabase) : passée au navigateur, non cachée
 
   e.respondWith(
     caches.match(req).then((cached) => {

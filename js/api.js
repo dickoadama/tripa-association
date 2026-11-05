@@ -1,35 +1,25 @@
 'use strict';
-/* TRIPA — Couche de données 100 % locale (localStorage, zéro backend).
+/* TRIPA — Couche données & auth : Supabase (GoTrue Auth + PostgREST) via fetch direct.
+ * Aucun SDK, aucune CDN : uniquement les endpoints REST du projet.
+ * Signatures asynchrones compatibles avec les modules (entity.js, utils.js,
+ * settings.js, profile.js, activity.js, auth.js, admin-management.js, dashboard inline).
  *
- * Signatures asynchrones identiques à la version serveur v3 pour que les
- * modules existants (entity.js, settings.js, profile.js, activity.js, auth.js,
- * dashboard inline, utils.js) fonctionnent sans modification.
+ * Rôles : super_admin (unique, premier inscrit — forcé par trigger SQL),
+ *         admin (invité par le Super Admin), user (invité par un admin, accès limité).
+ * Cloisonnement des données par RLS (owner_id = admin). Schéma : supabase-schema.sql.
  *
- * Formes de stockage localStorage :
- *   tripa_data_<entité>   JSON  [ { id, <champ>: <valeur>, ...,
- *                                    created_at, updated_at }, ... ]
- *   tripa_activity        JSON  [ { id, action, entity, label, created_at }, ... ]
- *   tripa_profile         JSON  { id, prenom, nom, email, telephone,
- *                                 asso_type, role, status, created_at }
- *   tripa_key             JSON  « hash-sha256-hex » du code d'accès local
- *   tripa_unlocked        '1'   présent = session déverrouillée
+ * localStorage : tripa_session (JWT), tripa_profile_cache (profil courant),
+ *                tripa_prefs (préférences). L'ancien schéma 100 % local est
+ *                purgé au chargement (demande d'effacement total des données).
  */
 const API = (() => {
 
-  const ENTITIES = {
-    adherents:      { label: 'Adhérents',      cols: [{key:'nom',label:'Nom',type:'text'},{key:'prenoms',label:'Prénoms',type:'text'},{key:'date_naissance',label:'Date de naissance',type:'date'},{key:'lieu_naissance',label:'Lieu de naissance',type:'text'},{key:'nationalite',label:'Nationalité',type:'text'},{key:'adresse',label:'Adresse',type:'text'},{key:'telephone',label:'Téléphone',type:'text'},{key:'email',label:'Email',type:'text'},{key:'profession',label:'Profession',type:'text'},{key:'groupe_sanguin',label:'Groupe sanguin',type:'text'},{key:'allergies',label:'Allergies',type:'text'},{key:'contact_urgence',label:"Contact d'urgence",type:'text'},{key:'telephone_urgence',label:"Téléphone d'urgence",type:'text'},{key:'date_adhesion',label:"Date d'adhésion",type:'date'},{key:'statut',label:'Statut',type:'text'}] },
-    cotisations:    { label: 'Cotisations',    cols: [{key:'date',label:'Date',type:'date'},{key:'montant',label:'Montant',type:'num'},{key:'mode',label:'Mode de paiement',type:'text'},{key:'periode',label:'Période',type:'text'},{key:'recu',label:'N° Reçu',type:'text'},{key:'statut',label:'Statut',type:'text'},{key:'adherent',label:'Adhérent',type:'text'},{key:'notes',label:'Notes',type:'text'}] },
-    evenements:     { label: 'Événements',     cols: [{key:'titre',label:'Titre',type:'text'},{key:'date_debut',label:'Début',type:'date'},{key:'date_fin',label:'Fin',type:'date'},{key:'lieu',label:'Lieu',type:'text'},{key:'type',label:'Type',type:'text'},{key:'participants',label:'Participants',type:'num'},{key:'budget',label:'Budget',type:'num'},{key:'description',label:'Description',type:'text'}] },
-    activites:      { label: 'Activités',      cols: [{key:'date',label:'Date',type:'date'},{key:'titre',label:'Titre',type:'text'},{key:'type',label:'Type',type:'text'},{key:'duree',label:'Durée',type:'text'},{key:'animateur',label:'Animateur',type:'text'},{key:'participants',label:'Participants',type:'num'},{key:'notes',label:'Notes',type:'text'}] },
-    communications: { label: 'Communications', cols: [{key:'date',label:'Date',type:'date'},{key:'canal',label:'Canal',type:'text'},{key:'destinataire',label:'Destinataire',type:'text'},{key:'objet',label:'Objet',type:'text'},{key:'contenu',label:'Contenu',type:'text'},{key:'statut',label:'Statut',type:'text'}] },
-    achats:         { label: 'Achats',         cols: [{key:'date',label:'Date',type:'date'},{key:'article',label:'Article',type:'text'},{key:'fournisseur',label:'Fournisseur',type:'text'},{key:'quantite',label:'Quantité',type:'num'},{key:'montant',label:'Montant',type:'num'},{key:'statut',label:'Statut',type:'text'},{key:'notes',label:'Notes',type:'text'}] },
-    documents:      { label: 'Documents',      cols: [{key:'titre',label:'Titre',type:'text'},{key:'type',label:'Type',type:'text'},{key:'date',label:'Date',type:'date'},{key:'auteur',label:'Auteur',type:'text'},{key:'version',label:'Version',type:'text'},{key:'mots_cles',label:'Mots-clés',type:'text'}] },
-    taches:         { label: 'Tâches',         cols: [{key:'titre',label:'Titre',type:'text'},{key:'description',label:'Description',type:'text'},{key:'echeance',label:'Échéance',type:'date'},{key:'priorite',label:'Priorité',type:'text'},{key:'assigne',label:'Assignée à',type:'text'},{key:'statut',label:'Statut',type:'text'}] }
-  };
-  const KEYS = Object.keys(ENTITIES);
+  const SUPABASE_URL = 'https://ldfjbjwtqcikcfsjotgt.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_yY6ioruyspMCBTOFxLJN4w_bYk2i8Em'; // clé publique (publishable) — protégée par RLS
   const PFX = 'tripa_';
+  const KEYS_ENTITIES = ['adherents','cotisations','evenements','activites','communications','achats','documents','taches'];
 
-  /* ---------- localStorage ---------- */
+  /* ---------- localStorage (session + cache uniquement) ---------- */
   function rawGet(k, def) {
     try { const s = localStorage.getItem(PFX + k); return s === null ? def : JSON.parse(s); }
     catch (_) { return def; }
@@ -40,32 +30,19 @@ const API = (() => {
   }
   function rawDel(k) { try { localStorage.removeItem(PFX + k); } catch (_) {} }
 
-  const rowsFor = (t) => { const a = rawGet('data_' + t, []); return Array.isArray(a) ? a : []; };
-  const saveRows = (t, rows) => rawSet('data_' + t, rows);
+  /* Purge one-shot de l'architecture « 100 % locale » (données abandonnées). */
+  (function purgeLegacyLocalData() {
+    ['key', 'unlocked', 'profile', 'activity'].forEach(rawDel);
+    try {
+      Object.keys(localStorage).filter(k => k.indexOf(PFX + 'data_') === 0)
+        .forEach(k => localStorage.removeItem(k));
+    } catch (_) {}
+  })();
 
   const genId = () => (self.crypto && crypto.randomUUID)
     ? crypto.randomUUID()
     : ('id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10));
   const nowIso = () => new Date().toISOString();
-
-  function coerce(col, val) {
-    if (val === undefined || val === null || val === '') return col.type === 'num' ? null : '';
-    if (col.type === 'bool') return (val === true || val === 1 || val === '1' || val === 'true' || val === 'oui') ? 1 : 0;
-    if (col.type === 'num') { const n = Number(val); return Number.isFinite(n) ? n : null; }
-    return String(val);
-  }
-
-  /* Normalise une ligne brute (plate OU avec cols/dates imbriqués) vers la
-   * forme plate { id, ...champs, ...dates } utilisée partout dans l'UI. */
-  function normalizeRow(def, raw) {
-    const out = { id: raw.id || genId() };
-    const src = (raw.cols && typeof raw.cols === 'object') ? raw.cols : raw;
-    for (const c of def.cols) out[c.key] = coerce(c, src[c.key]);
-    const dt = (raw.dates && typeof raw.dates === 'object') ? raw.dates : raw;
-    out.created_at = dt.created_at || nowIso();
-    out.updated_at = dt.updated_at || out.created_at;
-    return out;
-  }
 
   /* ---------- Toast ---------- */
   function appCmd(msg, type) {
@@ -80,303 +57,467 @@ const API = (() => {
     clearTimeout(t._hide); t._hide = setTimeout(() => { t.style.display = 'none'; }, 3200);
   }
 
-  /* ---------- SHA-256 hex (avec fallback FNV non crypto) ---------- */
-  async function sha256Hex(str) {
-    if (self.crypto && crypto.subtle && crypto.subtle.digest) {
-      try {
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch (_) {}
+  /* ---------- Session ---------- */
+  function getSession() { return rawGet('session', null); }
+  function setSession(s) { rawSet('session', s); }
+  function clearSession() { rawDel('session'); rawDel('profile_cache'); }
+
+  async function refreshSession() {
+    const s = getSession();
+    if (!s || !s.refresh_token) return false;
+    try {
+      const r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST', cache: 'no-store',
+        headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: s.refresh_token })
+      });
+      if (!r.ok) return false;
+      const j = await r.json();
+      setSession({ access_token: j.access_token, refresh_token: j.refresh_token,
+                   user: { id: j.user.id, email: j.user.email } });
+      return true;
+    } catch (_) { return false; }
+  }
+
+  /* Appel REST générique : {data, error, status}. 401 → un refresh puis rejet. */
+  async function sbFetch(path, opts) {
+    opts = opts || {};
+    const s = getSession();
+    const headers = Object.assign({ apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' }, opts.headers || {});
+    headers.Authorization = 'Bearer ' + ((s && s.access_token) || SUPABASE_ANON_KEY);
+    if (opts.prefer) headers.Prefer = opts.prefer;
+    let res;
+    try {
+      res = await fetch(SUPABASE_URL + path, {
+        method: opts.method || 'GET', cache: 'no-store', headers,
+        body: opts.body != null ? JSON.stringify(opts.body) : undefined
+      });
+    } catch (_) {
+      return { data: null, status: 0, error: { message: 'Hors-ligne ou serveur injoignable.', status: 0 } };
     }
-    let h = 0x811c9dc5;
-    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
-    return 'fnv-' + h.toString(16) + '-' + str.length;
+    if (res.status === 401 && s && s.refresh_token && !opts._retried) {
+      if (await refreshSession()) return sbFetch(path, Object.assign({}, opts, { _retried: true }));
+      clearSession();
+    }
+    const text = await res.text();
+    let json = null; try { json = text ? JSON.parse(text) : null; } catch (_) {}
+    if (!res.ok) {
+      const msg = (json && (json.error_description || json.hint || json.message || json.error)) || ('HTTP ' + res.status);
+      return { data: null, status: res.status, error: { message: msg, status: res.status } };
+    }
+    return { data: json, status: res.status, error: null };
+  }
+  const authPost = (path, body) => sbFetch(path, { method: 'POST', body });
+
+  /* ---------- Schéma d'entité (source unique : ENTITY_SCHEMA de utils.js) ---------- */
+  function fieldsOf(key) {
+    const s = (window.ENTITY_SCHEMA || {})[key];
+    return s && s.fields ? s.fields : [];
+  }
+  function coerceField(f, val) {
+    if (val === undefined || val === null || val === '') return f.type === 'number' ? null : (f.type === 'bool' ? false : '');
+    if (f.type === 'number') { const n = Number(val); return Number.isFinite(n) ? n : null; }
+    if (f.type === 'bool') return val === true || val === 'true' || val === 1 || val === '1';
+    return String(val);
+  }
+  function colsFrom(flat, key) {
+    const cols = {};
+    for (const f of fieldsOf(key)) cols[f.key] = coerceField(f, flat[f.key]);
+    return cols;
+  }
+  /* Ligne serve {id, owner_id, cols jsonb, dates} → ligne plate pour l'UI. */
+  function flatRow(r) {
+    return Object.assign({}, (r && r.cols) || {}, {
+      id: r.id, owner_id: r.owner_id, created_by: r.created_by,
+      created_at: r.created_at, updated_at: r.updated_at
+    });
   }
 
-  /* ---------- Journal d'activité ---------- */
-  function logActivity(action, entity, label) {
-    const arr = rawGet('activity', []);
-    arr.unshift({ id: genId(), action, entity, label: String(label || '').slice(0, 200), created_at: nowIso() });
-    if (arr.length > 500) arr.length = 500;
-    rawSet('activity', arr);
+  /* ---------- Auth ---------- */
+  function friendlySignupError(message) {
+    const m = String(message || '');
+    if (/TRIPA_NO_INVITATION/i.test(m)) return "Aucune invitation valide pour cette adresse email. Demandez un lien d'invitation.";
+    if (/already registered|already exists/i.test(m)) return 'Ce compte existe déjà — connectez-vous.';
+    if (/confirm/i.test(m)) return "Une confirmation d'email est requise : validez le lien reçu, ou désactivez « Confirm email » dans Supabase.";
+    return m || 'Échec de l\'opération.';
   }
 
-  /* ---------- Profil / Auth ---------- */
-  function defaultProfile() {
-    return {
-      id: genId(), prenom: '', nom: '', email: '', telephone: '',
-      asso_type: '', role: 'admin', status: 'active', created_at: nowIso()
-    };
+  async function registerUser({ email, password, prenom, nom, telephone, asso_type } = {}) {
+    if (!email) return { data: null, error: { message: 'Email requis.' } };
+    if (!password || password.length < 6) return { data: null, error: { message: 'Mot de passe : 6 caractères minimum.' } };
+    email = String(email).trim().toLowerCase();
+    const r = await authPost('/auth/v1/signup', { email, password, data: { prenom: prenom || '', nom: nom || '' } });
+    if (r.error) return { data: null, error: { message: friendlySignupError(r.error.message) } };
+    const j = r.data || {};
+    if (!j.access_token) return { data: null, error: { message: friendlySignupError('confirm') } };
+    setSession({ access_token: j.access_token, refresh_token: j.refresh_token,
+                 user: { id: j.user.id, email: j.user.email || email } });
+    /* Le trigger SQL décide : premier inscrit → super_admin ; sinon claim d'invitation. */
+    const p = await sbFetch('/rest/v1/profiles', { method: 'POST', prefer: 'return=representation',
+      body: { id: j.user.id, email, prenom: prenom || '', nom: nom || '',
+              telephone: telephone || '', asso_type: asso_type || '',
+              role: 'admin', status: 'pending', invited: false } });
+    if (p.error) { clearSession(); return { data: null, error: { message: friendlySignupError(p.error.message) } }; }
+    const prof = Array.isArray(p.data) ? p.data[0] : null;
+    rawSet('profile_cache', prof);
+    logActivity('create', 'profile', 'Compte créé (' + (prof && prof.role) + ')');
+    return { data: { user: j.user, profile: prof }, error: null };
   }
 
-  async function registerUser({ password } = {}) {
-    if (!password || String(password).length < 4)
-      return { data: null, error: { message: "Le code d'accès doit contenir au moins 4 caractères." } };
-    if (rawGet('key', null))
-      return { data: null, error: { message: "Un code d'accès existe déjà. Réinitialisation : localStorage.removeItem('tripa_key')." } };
-    rawSet('key', await sha256Hex(password));
-    const prof = rawGet('profile', null) || defaultProfile();
-    rawSet('profile', prof);
-    rawSet('unlocked', '1');
-    logActivity('create', 'profile', 'Compte local initialisé');
-    return { data: { token: 'local', user: prof, profile: prof }, error: null };
+  async function loginUser(email, password) {
+    if (!email || !password) return { data: null, error: { message: 'Email et mot de passe requis.' } };
+    const r = await authPost('/auth/v1/token?grant_type=password',
+      { email: String(email).trim().toLowerCase(), password });
+    if (r.error) {
+      const em = String((r.error && r.error.message) || '');
+      const msg = /email not confirmed|email_not_confirmed/i.test(em)
+        ? "Cette adresse email n'a pas été confirmée. Vérifiez votre boîte mail ou contactez l'administrateur."
+        : (r.status === 400 ? 'Email ou mot de passe incorrect.' : friendlySignupError(em));
+      return { data: null, error: { message: msg, status: r.status } };
+    }
+    const j = r.data;
+    setSession({ access_token: j.access_token, refresh_token: j.refresh_token,
+                 user: { id: j.user.id, email: j.user.email } });
+    let { data: prof, error } = await fetchCurrentUser();
+    /* Profil absent (inscription passée par « Confirmer l'email » ou compte
+     * créé depuis le dashboard) : on le crée à la volée. C'est le trigger SQL
+     * qui décide du rôle — premier inscrit = super_admin, sinon invitation
+     * obligatoire — donc aucune élévation de privilège n'est possible ici. */
+    if (!error && !prof) prof = await bootstrapProfile(j.user);
+    if (!prof) { clearSession(); return { data: null, error: { message: error ? error.message : "Aucune invitation valide pour cette adresse email. Demandez un lien d'invitation à votre administrateur." } }; }
+    return { data: { user: j.user, profile: prof }, error: null };
   }
 
-  async function loginUser(_email, password) {
-    const hash = rawGet('key', null);
-    if (!hash) return { data: null, error: { message: "Aucun compte. Définissez d'abord un code d'accès." } };
-    if (!password) return { data: null, error: { message: 'Code requis.' } };
-    const candidate = await sha256Hex(password);
-    if (candidate !== hash) return { data: null, error: { message: "Code d'accès incorrect." } };
-    rawSet('unlocked', '1');
-    let prof = rawGet('profile', null);
-    if (!prof) { prof = defaultProfile(); rawSet('profile', prof); }
-    return { data: { token: 'local', user: prof, profile: prof }, error: null };
+  /* Insère le profil manquant du compte connecté ; renvoie le profil ou null. */
+  async function bootstrapProfile(user) {
+    const email = String((user && user.email) || '').trim().toLowerCase();
+    const meta = (user && user.user_metadata) || {};
+    const p = await sbFetch('/rest/v1/profiles', { method: 'POST', prefer: 'return=representation',
+      body: { id: user.id, email, prenom: meta.prenom || meta.first_name || '', nom: meta.nom || meta.last_name || '',
+              telephone: '', asso_type: '', role: 'admin', status: 'pending', invited: false } });
+    if (p.error) return null;
+    const prof = Array.isArray(p.data) ? p.data[0] : null;
+    if (prof) rawSet('profile_cache', prof);
+    return prof || null;
+  }
+
+  async function recoverPassword(email) {
+    if (!email) return { data: null, error: { message: 'Email requis.' } };
+    const r = await sbFetch('/auth/v1/recover', { method: 'POST',
+      body: { email: String(email).trim().toLowerCase(), redirect_to: location.origin + location.pathname.replace(/[^/]*$/, 'index.html') } });
+    if (r.error) return { data: null, error: r.error };
+    return { data: { message: 'OK' }, error: null };
   }
 
   async function fetchCurrentUser() {
-    if (!rawGet('unlocked', null)) return { data: null, error: { message: 'Non authentifié' } };
-    let p = rawGet('profile', null);
-    if (!p) { p = defaultProfile(); rawSet('profile', p); }
-    return { data: p, error: null };
+    const s = getSession();
+    if (!s || !s.user) return { data: null, error: { message: 'Non authentifié.' } };
+    const r = await sbFetch('/rest/v1/profiles?id=eq.' + s.user.id + '&limit=1&select=*');
+    if (r.error) return { data: rawGet('profile_cache', null), error: r.error };
+    const prof = (r.data || [])[0] || null;
+    if (prof) rawSet('profile_cache', prof);
+    return { data: prof, error: null };
   }
 
-  async function logoutUser() { rawDel('unlocked'); return { data: { message: 'OK' }, error: null }; }
-
-  async function signOut() {
-    rawDel('unlocked');
-    location.href = 'index.html';
+  async function logoutUser() {
+    try { await sbFetch('/auth/v1/logout', { method: 'POST' }); } catch (_) {}
+    clearSession();
+    return { data: { message: 'OK' }, error: null };
   }
+
+  async function signOut() { await logoutUser(); location.href = 'index.html'; }
 
   async function changePassword(cur, nw) {
-    const hash = rawGet('key', null);
-    if (!hash) return { data: null, error: { message: 'Aucun compte.' } };
-    if (await sha256Hex(String(cur || '')) !== hash)
-      return { data: null, error: { message: 'Code actuel incorrect.' } };
-    if (!nw || String(nw).length < 4)
-      return { data: null, error: { message: 'Nouveau code trop court (min. 4).' } };
-    rawSet('key', await sha256Hex(nw));
-    logActivity('update', 'profile', 'Code modifié');
+    const s = getSession();
+    if (!s) return { data: null, error: { message: 'Non connecté.' } };
+    if (!nw || String(nw).length < 6) return { data: null, error: { message: 'Nouveau mot de passe : 6 caractères minimum.' } };
+    const check = await authPost('/auth/v1/token?grant_type=password', { email: s.user.email, password: String(cur || '') });
+    if (check.error) return { data: null, error: { message: 'Mot de passe actuel incorrect.' } };
+    const r = await sbFetch('/auth/v1/user', { method: 'PUT', body: { password: String(nw) } });
+    if (r.error) return r;
+    logActivity('update', 'profile', 'Mot de passe modifié');
     return { data: { message: 'OK' }, error: null };
   }
 
   async function updateOwnProfile(patch) {
-    const p = rawGet('profile', null) || defaultProfile();
-    const merged = Object.assign({}, p, patch || {});
-    rawSet('profile', merged);
+    const prof = rawGet('profile_cache', null);
+    if (!prof) return { data: null, error: { message: 'Non connecté.' } };
+    const body = {};
+    for (const k of ['prenom', 'nom', 'telephone', 'asso_type']) if (k in (patch || {})) body[k] = String(patch[k] || '');
+    const r = await sbFetch('/rest/v1/profiles?row_id=eq.' + prof.row_id + '&select=*',
+      { method: 'PATCH', prefer: 'return=representation', body });
+    if (r.error) return r;
+    const merged = (r.data || [])[0] || Object.assign({}, prof, body);
+    rawSet('profile_cache', merged);
     logActivity('update', 'profile', 'Profil mis à jour');
     return { data: merged, error: null };
   }
 
-  function hasKey() { return !!rawGet('key', null); }
-  function isUnlocked() { return !!rawGet('unlocked', null); }
+  function hasKey() { return !!getSession(); }          /* compat anciens appels */
+  function isUnlocked() { return !!getSession(); }      /* compat anciens appels */
+  function isSuperAdmin() { const p = rawGet('profile_cache', null); return !!p && p.role === 'super_admin'; }
+
+  /* ---------- Journal d'activité ---------- */
+  function logActivity(action, entity, label) {
+    if (!getSession()) return;
+    sbFetch('/rest/v1/activity', { method: 'POST', prefer: 'return=minimal',
+      body: { action, entity, label: String(label || '').slice(0, 200),
+              user_email: (getSession().user || {}).email || '' } }).then(() => {});
+  }
 
   /* ---------- Définition d'entité ---------- */
   function getEntityDef(key) {
-    const def = ENTITIES[key];
-    if (!def) return { key, label: key, columns: [], columnDefs: [] };
-    const columns = def.cols.map(c => Object.assign({}, c));
-    return { key, label: def.label, columns, columnDefs: columns };
+    const s = (window.ENTITY_SCHEMA || {})[key];
+    const columns = fieldsOf(key).map(c => Object.assign({}, c));
+    return { key, label: (s && s.label) || key, columns, columnDefs: columns };
   }
 
-  /* ---------- CRUD générique (data = tableau plat) ---------- */
+  /* ---------- CRUD générique ---------- */
   async function fetchAll(key, opts) {
     opts = opts || {};
-    if (!ENTITIES[key]) return { data: [], error: { message: 'Entité inconnue' } };
-    const def = ENTITIES[key];
-    let rows = rowsFor(key);
+    if (!(window.ENTITY_SCHEMA || {})[key]) return { data: [], error: { message: 'Entité inconnue' } };
+    const r = await sbFetch('/rest/v1/' + key + '?select=*&order=created_at.desc&limit=5000');
+    if (r.error) return { data: null, error: r.error };
+    let rows = (r.data || []).map(flatRow);
 
     const q = String(opts.search || opts.q || '').trim().toLowerCase();
-    if (q) {
-      rows = rows.filter(r => def.cols.some(c => String(r[c.key] == null ? '' : r[c.key]).toLowerCase().includes(q)));
-    }
+    if (q) rows = rows.filter(row => fieldsOf(key).some(f => String(row[f.key] == null ? '' : row[f.key]).toLowerCase().includes(q)));
 
-    const sortBy = opts.sort || 'updated_at';
-    const dirRaw = String(opts.dir || opts.order || 'desc').toLowerCase();
-    const dir = dirRaw === 'asc' ? 1 : -1;
+    const sortBy = opts.sort || 'created_at';
+    const dir = String(opts.dir || 'desc').toLowerCase() === 'asc' ? 1 : -1;
     rows = rows.slice().sort((a, b) => {
       const va = a[sortBy], vb = b[sortBy];
-      if (sortBy === 'created_at' || sortBy === 'updated_at' || sortBy.endsWith('date') || sortBy.startsWith('date_'))
-        return String(va || '').localeCompare(String(vb || '')) * dir;
-      return String(va == null ? '' : va).localeCompare(String(vb == null ? '' : vb)) * dir;
+      if (va == null && vb == null) return 0;
+      if (va == null) return dir; if (vb == null) return -dir;
+      if (typeof va === 'number' || typeof vb === 'number') return (Number(va) - Number(vb)) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
     });
 
     const per = Number(opts.limit || opts.per || opts.perPage || 25) || 25;
     const page = Number(opts.page) || 1;
     const paged = rows.slice((page - 1) * per, page * per);
-
-    // Expose aussi total/colonnes sur l'objet retourné pour les usages avancés
-    // sans casser les consommateurs qui traitent `data` comme un tableau.
-    const result = paged.map(r => Object.assign({}, r));
+    const result = paged.map(x => Object.assign({}, x));
     result.total = rows.length; result.page = page; result.perPage = per;
     result.totalPages = Math.max(1, Math.ceil(rows.length / per));
-    result.columns = def.cols.map(c => Object.assign({}, c));
+    result.columns = fieldsOf(key).map(c => Object.assign({}, c));
     result.columnDefs = result.columns;
     return { data: result, error: null };
   }
 
   async function fetchById(key, id) {
-    if (!ENTITIES[key]) return { data: null, error: { message: 'Entité inconnue' } };
-    const r = rowsFor(key).find(x => x.id === id);
-    return r ? { data: Object.assign({}, r), error: null } : { data: null, error: { message: 'Introuvable' } };
+    const r = await sbFetch('/rest/v1/' + key + '?id=eq.' + encodeURIComponent(id) + '&limit=1&select=*');
+    if (r.error) return { data: null, error: r.error };
+    const row = (r.data || [])[0];
+    return row ? { data: flatRow(row), error: null } : { data: null, error: { message: 'Introuvable' } };
   }
 
-  async function insertRow(key, cols) {
-    cols = cols || {};
-    if (!ENTITIES[key]) return { data: null, error: { message: 'Entité inconnue' } };
-    const def = ENTITIES[key];
-    const row = { id: cols.id || genId() };
-    for (const col of def.cols) row[col.key] = coerce(col, cols[col.key]);
-    row.created_at = cols.created_at || nowIso();
-    row.updated_at = cols.updated_at || row.created_at;
-    const rows = rowsFor(key); rows.push(row); saveRows(key, rows);
-    const first = def.cols[0];
-    logActivity('create', key, (first ? row[first.key] : row.id) || row.id);
-    return { data: Object.assign({}, row), error: null };
+  async function insertRow(key, flat) {
+    flat = flat || {};
+    if (!(window.ENTITY_SCHEMA || {})[key]) return { data: null, error: { message: 'Entité inconnue' } };
+    const r = await sbFetch('/rest/v1/' + key, { method: 'POST', prefer: 'return=representation',
+      body: { cols: colsFrom(flat, key) } });
+    if (r.error) return { data: null, error: r.error };
+    const row = flatRow((r.data || [])[0] || {});
+    logActivity('create', key, rowTitleSafe(key, row) || row.id);
+    return { data: row, error: null };
   }
 
   async function updateRow(key, id, patch) {
     patch = patch || {};
-    if (!ENTITIES[key]) return { data: null, error: { message: 'Entité inconnue' } };
-    const def = ENTITIES[key];
-    const rows = rowsFor(key);
-    const i = rows.findIndex(r => r.id === id);
-    if (i < 0) return { data: null, error: { message: 'Introuvable' } };
-    for (const col of def.cols) if (col.key in patch) rows[i][col.key] = coerce(col, patch[col.key]);
-    rows[i].updated_at = nowIso();
-    saveRows(key, rows);
-    const first = def.cols[0];
-    logActivity('update', key, (first ? rows[i][first.key] : id) || id);
-    return { data: Object.assign({}, rows[i]), error: null };
+    const cur = await fetchById(key, id);
+    if (cur.error) return cur;
+    const merged = Object.assign({}, cur.data, patch);
+    const r = await sbFetch('/rest/v1/' + key + '?id=eq.' + encodeURIComponent(id) + '&select=*',
+      { method: 'PATCH', prefer: 'return=representation', body: { cols: colsFrom(merged, key) } });
+    if (r.error) return r;
+    const row = flatRow((r.data || [])[0] || merged);
+    logActivity('update', key, rowTitleSafe(key, row) || id);
+    return { data: row, error: null };
   }
 
   async function deleteRow(key, id) {
-    if (!ENTITIES[key]) return { data: null, error: { message: 'Entité inconnue' } };
-    const def = ENTITIES[key];
-    const rows = rowsFor(key);
-    const row = rows.find(r => r.id === id);
-    saveRows(key, rows.filter(r => r.id !== id));
-    if (row) {
-      const first = def.cols[0];
-      logActivity('delete', key, (first ? row[first.key] : id) || id);
-    }
+    const cur = await fetchById(key, id);
+    const r = await sbFetch('/rest/v1/' + key + '?id=eq.' + encodeURIComponent(id), { method: 'DELETE' });
+    if (r.error) return r;
+    if (!cur.error && cur.data) logActivity('delete', key, rowTitleSafe(key, cur.data) || id);
     return { data: { message: 'OK', id }, error: null };
   }
 
-  /* ---------- Dashboard stats ---------- */
+  function rowTitleSafe(key, row) {
+    const tf = ((window.ENTITY_SCHEMA || {})[key] || {}).titleField || [];
+    const t = tf.map(k => row[k]).filter(Boolean).join(' ');
+    return t || row.titre || row.nom || row.libelle || row.fournisseur || row.periode || '';
+  }
+
+  /* ---------- Tableau de bord ---------- */
   async function fetchStats() {
-    const counts = {};
-    for (const k of KEYS) counts[k] = rowsFor(k).length;
+    const tables = {};
+    const results = await Promise.all(KEYS_ENTITIES.map(k => fetchAll(k, { limit: 5000 })));
+    KEYS_ENTITIES.forEach((k, i) => { tables[k] = (!results[i].error && results[i].data) ? results[i].data : []; });
+
+    const counts = {}; KEYS_ENTITIES.forEach(k => { counts[k] = tables[k].length; });
+    const tally = (k, field) => { const m = {}; tables[k].forEach(r => { const v = r[field] || '—'; m[v] = (m[v] || 0) + 1; }); return m; };
+    const tallies = { adherents: tally('adherents', 'statut'), cotisations: tally('cotisations', 'statut'),
+                      taches: tally('taches', 'statut'), evenements: tally('evenements', 'type') };
 
     const all = [];
-    for (const k of KEYS) {
-      const def = ENTITIES[k]; const first = def.cols[0];
-      for (const r of rowsFor(k)) {
-        all.push({
-          key: k,
-          label: String((first ? r[first.key] : '') || 'Sans titre'),
-          updated_at: r.updated_at || r.created_at || ''
-        });
-      }
-    }
+    KEYS_ENTITIES.forEach(k => { for (const r of tables[k]) all.push({ key: k, label: String(rowTitleSafe(k, r) || 'Sans titre'), updated_at: r.updated_at || r.created_at || '' }); });
     all.sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
     const recent = all.slice(0, 5).map(r => ({ key: r.key, label: r.label }));
 
-    const now = new Date();
-    const moisPrefix = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-    const cotis = rowsFor('cotisations');
+    const moisPrefix = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
     let month_encaissees = 0, month_count = 0, total_encaisse = 0;
-    for (const c of cotis) {
+    for (const c of tables.cotisations) {
+      if (String(c.statut || '') !== 'payee') continue;
       const m = Number(c.montant || 0);
-      const st = String(c.statut || '').toLowerCase();
-      if (st === 'annulée' || st === 'annulee') continue;
       total_encaisse += m;
-      if (String(c.date || '').startsWith(moisPrefix)) { month_encaissees += m; month_count++; }
+      if (String(c.date || c.date_paiement || '').startsWith(moisPrefix)) { month_encaissees += m; month_count++; }
     }
-
-    return {
-      data: { counts, recent, month_encaissees, month_count, total_encaisse },
-      error: null
-    };
+    return { data: { counts, tallies, recent, month_encaissees, month_count, total_encaisse }, error: null };
   }
 
   async function fetchActivity(limit) {
-    const arr = rawGet('activity', []);
     const n = Number(limit) || 200;
-    return { data: arr.slice(0, n).map(a => Object.assign({}, a)), error: null };
+    const r = await sbFetch('/rest/v1/activity?order=created_at.desc&limit=' + n + '&select=*');
+    if (r.error) return { data: [], error: r.error };
+    return { data: (r.data || []).map(a => ({ id: a.id, action: a.action, entity: a.entity, label: a.label, created_at: a.created_at })), error: null };
   }
 
   /* ---------- Sauvegarde / restauration ---------- */
   async function fetchBackup() {
     const entities = {};
-    for (const k of KEYS) entities[k] = rowsFor(k).map(r => Object.assign({}, r));
-    const p = rawGet('profile', null);
+    const results = await Promise.all(KEYS_ENTITIES.map(k => fetchAll(k, { limit: 5000 })));
+    KEYS_ENTITIES.forEach((k, i) => { entities[k] = (!results[i].error && results[i].data) ? results[i].data.map(x => Object.assign({}, x)) : []; });
+    const p = rawGet('profile_cache', null);
     if (p) entities.admins = [Object.assign({}, p)];
-    return { data: { version: 3, exported_at: nowIso(), entities }, error: null };
+    return { data: { version: 4, exported_at: nowIso(), entities }, error: null };
   }
 
   async function restoreBackup(payload) {
     const src = (payload && payload.entities) ? payload.entities : payload;
     if (!src || typeof src !== 'object') return { data: null, error: { message: 'Format invalide.' } };
-    for (const k of Object.keys(src)) {
-      const rows = src[k];
-      if (!Array.isArray(rows)) continue;
-      if (k === 'admins') {
-        const a = rows[0]; if (!a) continue;
-        const prof = normalizeRow({ cols: [
-          { key: 'prenom', type: 'text' }, { key: 'nom', type: 'text' }, { key: 'email', type: 'text' },
-          { key: 'telephone', type: 'text' }, { key: 'asso_type', type: 'text' },
-          { key: 'role', type: 'text' }, { key: 'status', type: 'text' }
-        ] }, a);
-        prof.id = a.id || genId();
-        prof.created_at = (a.dates && a.dates.created_at) || a.created_at || nowIso();
-        rawSet('profile', prof);
-        continue;
-      }
-      if (!ENTITIES[k]) continue;
-      const def = ENTITIES[k];
-      saveRows(k, rows.map(r => normalizeRow(def, r)));
+    const s = getSession();
+    if (!s) return { data: null, error: { message: 'Non connecté.' } };
+    for (const k of KEYS_ENTITIES) {
+      const rows = Array.isArray(src[k]) ? src[k] : [];
+      const del = await sbFetch('/rest/v1/' + k + '?id=not.is.null', { method: 'DELETE' });
+      if (del.error) return { data: null, error: del.error };
+      if (!rows.length) continue;
+      const body = rows.map(r => ({ id: r.id || genId(), cols: colsFrom(r, k) }));
+      const ins = await sbFetch('/rest/v1/' + k, { method: 'POST', prefer: 'return=minimal', body });
+      if (ins.error) return { data: null, error: ins.error };
     }
     logActivity('create', 'system', 'Restauration effectuée');
     return { data: { message: 'OK' }, error: null };
   }
 
-  /* ---------- Guards de page ---------- */
-  async function initAuth() { return true; }
+  /* ---------- Invitations & console Super Admin ---------- */
+  async function hasSuperAdmin() {
+    const r = await sbFetch('/rest/v1/rpc/has_super_admin');
+    return !r.error && r.data === true;
+  }
+  async function fetchInvitation(token) {
+    const r = await sbFetch('/rest/v1/invitations?select=token,email,prenom,nom,telephone,asso_type,role&token=eq.' + encodeURIComponent(token) + '&accepted_at=is.null&limit=1');
+    if (r.error) return { data: null, error: r.error };
+    return { data: (r.data || [])[0] || null, error: null };
+  }
+  async function createInvitation({ email, prenom, nom, telephone, asso_type, role }) {
+    const s = getSession();
+    if (!s) return { data: null, error: { message: 'Non connecté.' } };
+    const token = genId();
+    const r = await sbFetch('/rest/v1/invitations', { method: 'POST', prefer: 'return=representation',
+      body: { token, email: String(email || '').trim().toLowerCase(), prenom: prenom || '', nom: nom || '',
+              telephone: telephone || '', asso_type: asso_type || '', role: role || 'user', created_by: s.user.id } });
+    if (r.error) return { data: null, error: r.error };
+    const inv = (r.data || [])[0];
+    logActivity('create', 'invitation', 'Invitation ' + (inv && inv.role) + ' : ' + (inv && inv.email));
+    return { data: inv, error: null };
+  }
+  async function listInvitations() {
+    const s = getSession();
+    if (!s) return { data: [], error: { message: 'Non connecté.' } };
+    const q = isSuperAdmin() ? 'select=*' : 'select=*&created_by=eq.' + s.user.id;
+    const r = await sbFetch('/rest/v1/invitations?' + q + '&order=created_at.desc&limit=200');
+    if (r.error) return { data: [], error: r.error };
+    return { data: (r.data || []).filter(x => !x.accepted_at), error: null };
+  }
+  async function deleteInvitation(token) {
+    const r = await sbFetch('/rest/v1/invitations?token=eq.' + encodeURIComponent(token), { method: 'DELETE' });
+    return r.error ? r : { data: { message: 'OK' }, error: null };
+  }
+  async function listAdmins() {
+    const r = await sbFetch('/rest/v1/profiles?select=*&role=eq.admin&order=created_at.desc&limit=500');
+    if (r.error) return { data: [], error: r.error };
+    return { data: r.data || [], error: null };
+  }
+  async function listUsers() {
+    const r = await sbFetch('/rest/v1/profiles?select=*&role=eq.user&order=created_at.desc&limit=1000');
+    if (r.error) return { data: [], error: r.error };
+    return { data: r.data || [], error: null };
+  }
+  async function setProfileStatus(rowId, status) {
+    const r = await sbFetch('/rest/v1/profiles?row_id=eq.' + encodeURIComponent(rowId) + '&select=*',
+      { method: 'PATCH', prefer: 'return=representation', body: { status } });
+    if (r.error) return r;
+    logActivity('update', 'profile', 'Statut ' + status + ' : ' + ((r.data || [])[0] || {}).email);
+    return { data: (r.data || [])[0], error: null };
+  }
+  function invitationLink(token) {
+    return new URL('register.html?invite=' + encodeURIComponent(token), location.href).href;
+  }
 
-  async function requireAuth() {
-    if (rawGet('unlocked', null)) return rawGet('profile', null) || defaultProfile();
-    const back = encodeURIComponent(location.pathname.split('/').pop() || 'index.html');
-    location.href = 'index.html?next=' + back;
-    return null;
+  /* ---------- Guards de page ---------- */
+  async function initAuth() { return !!getSession(); }
+
+  async function requireAuth(statuses, roles) {
+    if (!getSession()) {
+      const back = encodeURIComponent(location.pathname.split('/').pop() + location.search || 'index.html');
+      location.href = 'index.html?next=' + back;
+      return null;
+    }
+    const { data: prof } = await fetchCurrentUser();
+    if (!prof) { appCmd('Compte introuvable — reconnectez-vous.', 'err'); await logoutUser(); location.href = 'index.html'; return null; }
+    if (statuses && statuses.length && !statuses.includes(prof.status)) {
+      const msg = prof.status === 'suspended' ? 'Compte suspendu — contactez le Super Admin.'
+                : prof.status === 'revoked'   ? 'Compte révoqué.'
+                : 'Compte en attente de validation.';
+      appCmd(msg, 'err'); setTimeout(() => signOut(), 1600); return null;
+    }
+    if (roles && roles.length && !roles.includes(prof.role)) {
+      appCmd('Page réservée à un autre rôle.', 'err'); location.href = 'dashboard.html'; return null;
+    }
+    return prof;
   }
 
   async function redirectIfAuthed() {
-    if (rawGet('unlocked', null)) { location.href = 'dashboard.html'; return true; }
-    return false;
+    if (!getSession()) return false;
+    const { data: prof } = await fetchCurrentUser();
+    if (!prof) return false;
+    location.href = prof.role === 'super_admin' ? 'admin-management.html' : 'dashboard.html';
+    return true;
   }
 
   async function protectAll() {
-    if (rawGet('unlocked', null)) return;
-    location.href = 'index.html';
+    if (!getSession()) location.href = 'index.html';
   }
 
   /* ---------- API publique ---------- */
   return {
-    appCmd,
-    registerUser, loginUser, fetchCurrentUser, logoutUser, signOut,
+    SUPABASE_URL, appCmd,
+    registerUser, loginUser, recoverPassword, fetchCurrentUser, logoutUser, signOut,
     changePassword, updateOwnProfile,
-    hasKey, isUnlocked,
+    hasKey, isUnlocked, isSuperAdmin, getSession,
     initAuth, protectAll, requireAuth, redirectIfAuthed,
     getEntityDef, fetchAll, fetchById, insertRow, updateRow, deleteRow,
     fetchStats, fetchActivity,
-    fetchBackup, restoreBackup
+    fetchBackup, restoreBackup,
+    hasSuperAdmin, fetchInvitation, createInvitation, listInvitations, deleteInvitation,
+    invitationLink, listAdmins, listUsers, setProfileStatus,
+    KEYS: KEYS_ENTITIES
   };
 })();
 
-/* Expose globalement : API.xxx ET alias courts pour les modules historiques.
- * Les alias courts (fetchAll, insertRow, etc.) sont ce que utilisent entity.js,
- * settings.js, profile.js, activity.js, utils.js et dashboard.html inline. */
+/* Expose globalement : API.xxx ET alias courts pour les modules historiques. */
 if (typeof window !== 'undefined') {
   window.API = API;
   Object.assign(window, {
@@ -386,11 +527,17 @@ if (typeof window !== 'undefined') {
     fetchStats: API.fetchStats, fetchActivity: API.fetchActivity,
     fetchBackup: API.fetchBackup, restoreBackup: API.restoreBackup,
     changePassword: API.changePassword, updateOwnProfile: API.updateOwnProfile,
-    loginUser: API.loginUser, registerUser: API.registerUser,
+    loginUser: API.loginUser, registerUser: API.registerUser, recoverPassword: API.recoverPassword,
     fetchCurrentUser: API.fetchCurrentUser, logoutUser: API.logoutUser, signOut: API.signOut,
+    hasSuperAdmin: API.hasSuperAdmin, fetchInvitation: API.fetchInvitation,
+    createInvitation: API.createInvitation, listInvitations: API.listInvitations,
+    deleteInvitation: API.deleteInvitation, invitationLink: API.invitationLink,
+    listAdmins: API.listAdmins, listUsers: API.listUsers, setProfileStatus: API.setProfileStatus,
+    isSuperAdmin: API.isSuperAdmin,
     initAuth: API.initAuth, protectAll: API.protectAll,
     requireAuth: API.requireAuth, redirectIfAuthed: API.redirectIfAuthed,
-    getSessionProfile: () => (window.API && API.isUnlocked && API.isUnlocked()) ? JSON.parse(localStorage.getItem('tripa_profile') || 'null') : null,
-    setSessionToken: () => {}, saveSessionProfile: (p) => localStorage.setItem('tripa_profile', JSON.stringify(p))
+    getSessionProfile: () => API.getSession() ? (JSON.parse(localStorage.getItem('tripa_profile_cache') || 'null')) : null,
+    setSessionToken: () => {},
+    saveSessionProfile: (p) => localStorage.setItem('tripa_profile_cache', JSON.stringify(p))
   });
 }

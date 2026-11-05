@@ -44,6 +44,7 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       const profile = await requireAuth(['active']); if (!profile) return;
+      if (profile.role === 'super_admin') { location.href = 'admin-management.html'; return; }
       buildLayout('dashboard', 'Tableau de bord');
       const content = document.getElementById('content');
       content.innerHTML = '<div class="grid grid--4 mb-6" id="statGrid"></div>'+
@@ -51,6 +52,11 @@
         '<div class="card"><div class="card__header"><h3>Cotisations par statut</h3></div><div class="card__body"><canvas id="cCot"></canvas></div></div></div>'+
         '<div class="grid grid--2 mb-6"><div class="card"><div class="card__header"><h3>Tâches par statut</h3></div><div class="card__body"><canvas id="cTach"></canvas></div></div>'+
         '<div class="card"><div class="card__header"><h3>Événements par type</h3></div><div class="card__body"><canvas id="cEven"></canvas></div></div></div>'+
+        (profile.role === 'admin' ? '<div class="card mb-6"><div class="card__header"><h3><i data-lucide="mail-plus"></i> Inviter un utilisateur</h3></div><div class="card__body">'+
+        '<div class="row wrap" style="gap:8px;"><input class="input" id="invEmail" type="email" placeholder="Email de la personne invitée" style="max-width:320px;">'+
+        '<input class="input" id="invNom" placeholder="Nom (facultatif)" style="max-width:180px;">'+
+        '<button class="btn btn--primary btn--sm" id="invGo"><i data-lucide="link"></i> Générer le lien</button></div>'+
+        '<div id="invOut" class="mt-2"></div><div id="invList" class="mt-4"></div></div></div>' : '')+
         '<div class="card"><div class="card__header"><h3>Accès rapide</h3></div><div class="card__body"><div class="grid grid--3" id="quick"></div></div></div>';
 
       const EMPTY = { counts:{}, tallies:{adherents:{},cotisations:{},taches:{},evenements:{}}, total_encaisse:0 };
@@ -76,10 +82,60 @@
         bars(document.getElementById('cTach'), S.tallies.taches||{}, '#0284c7');
         bars(document.getElementById('cEven'), S.tallies.evenements||{}, '#4f46e5');
       }
-      document.getElementById('quick').innerHTML = Object.keys(ENTITY_SCHEMA).map(k=>{ const s=ENTITY_SCHEMA[k];
+      const quickKeys = Object.keys(ENTITY_SCHEMA).filter(k => profile.role !== 'user' || USER_NAV_KEYS.includes(k));
+      document.getElementById('quick').innerHTML = quickKeys.map(k=>{ const s=ENTITY_SCHEMA[k];
         return `<a class="card card__body row" href="entity.html?t=${k}" style="gap:10px;"><i data-lucide="${s.icon}" style="color:var(--accent)"></i>${s.label}</a>`; }).join('');
+
+      if (profile.role === 'admin') wireInvites();
       lucide.createIcons();
     });
+
+    function wireInvites(){
+      const renderList = async () => {
+        const { data } = await listInvitations();
+        const box = document.getElementById('invList'); if (!box) return;
+        const mine = (data || []).filter(i => i.role === 'user');
+        box.innerHTML = mine.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Email</th><th>Lien</th><th>Créée</th><th style="text-align:right;">Actions</th></tr></thead><tbody>' +
+          mine.map(i => `<tr><td><b>${esc(i.email)}</b></td><td><code style="font-size:11px;word-break:break-all;">${esc(invitationLink(i.token))}</code></td><td>${formatDate(i.created_at)}</td>
+            <td style="text-align:right;white-space:nowrap;"><button class="btn btn--ghost btn--sm" data-copy="${esc(i.token)}"><i data-lucide="copy"></i></button>
+            <a class="btn btn--ghost btn--sm" href="mailto:${encodeURIComponent(i.email)}?subject=${encodeURIComponent('Invitation TRIPA')}&body=${encodeURIComponent('Rejoignez TRIPA via ce lien :\n' + invitationLink(i.token))}"><i data-lucide="mail"></i></a>
+            <button class="btn btn--ghost btn--sm" style="color:var(--danger)" data-del="${esc(i.token)}"><i data-lucide="trash-2"></i></button></td></tr>`).join('') +
+          '</tbody></table></div>' : '<span class="muted" style="font-size:13px;">Aucune invitation en attente.</span>';
+        box.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+          const link = invitationLink(b.dataset.copy); let ok = false;
+          try { await navigator.clipboard.writeText(link); ok = true; } catch (_) {}
+          showToast(ok ? 'Lien copié.' : 'Copie impossible.', ok ? 'success' : 'warning');
+        }));
+        box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+          if (!confirm('Supprimer cette invitation ?')) return;
+          const { error } = await deleteInvitation(b.dataset.del);
+          if (error) { showToast('Erreur : ' + error.message, 'danger'); return; }
+          showToast('Invitation supprimée.', 'success'); renderList();
+        }));
+        if (window.lucide) lucide.createIcons();
+      };
+      const go = document.getElementById('invGo');
+      if (go) go.addEventListener('click', async () => {
+        const email = (document.getElementById('invEmail').value || '').trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast('Email invalide.', 'danger'); return; }
+        go.disabled = true;
+        const { data, error } = await createInvitation({ email, role: 'user', nom: (document.getElementById('invNom').value || '').trim() });
+        go.disabled = false;
+        if (error) { showToast('Erreur : ' + error.message, 'danger'); return; }
+        const link = invitationLink(data.token);
+        document.getElementById('invOut').innerHTML = `<div class="badge badge--success">Invitation créée</div><br>
+          <code style="font-size:12px;word-break:break-all;">${esc(link)}</code>
+          <button class="btn btn--ghost btn--sm" id="copyNewInvite"><i data-lucide="copy"></i> Copier</button>`;
+        document.getElementById('copyNewInvite').addEventListener('click', async () => {
+          let ok = false; try { await navigator.clipboard.writeText(link); ok = true; } catch (_) {}
+          showToast(ok ? 'Lien copié.' : 'Copie impossible.', ok ? 'success' : 'warning');
+        });
+        document.getElementById('invEmail').value = ''; document.getElementById('invNom').value = '';
+        renderList();
+        if (window.lucide) lucide.createIcons();
+      });
+      renderList();
+    }
   </script>
   <script src="js/pwa.js"></script>
 </body>

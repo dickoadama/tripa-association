@@ -19,7 +19,7 @@ const OUT = path.join(__dirname, 'dist');
 
 // Fichiers et dossiers frontend à copier (exclut node_modules/, backups/, dist/…)
 const FRONTEND_ITEMS = [
-  'index.html', 'register.html', 'dashboard.html', 'entity.html',
+  'index.html', 'register.html', 'dashboard.html', 'entity.html', 'admin-management.html',
   'settings.html', 'profile.html', 'help.html', 'activity.html',
   'css', 'js', 'icons', 'sw.js', 'manifest.webmanifest'
 ];
@@ -29,14 +29,34 @@ const FRONTEND_ITEMS = [
  * mais il sort illisible et ces raccourcis sont neutralisés.) */
 const GUARD = '<script>(function(){function no(){var d=document.createElement("div");d.textContent="Le code source de TRIPA est prot\u00e9g\u00e9.";d.setAttribute("style","position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 16px;border-radius:8px;z-index:99999;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3)");document.body.appendChild(d);setTimeout(function(){d.remove()},1800)}document.addEventListener("contextmenu",function(e){e.preventDefault();no()});document.addEventListener("keydown",function(e){var b=e.key==="F12"||(e.ctrlKey&&e.shiftKey&&/^[ijcICJ]$/.test(e.key))||(e.ctrlKey&&!e.shiftKey&&/^[uUsS]$/.test(e.key));if(b){e.preventDefault();e.stopPropagation();no()}});})();</script>';
 
-function minifyHtml(html) {
-  return html
+/* HTML : les blocs <script> inline sont sortis, passés au terser (comme les .js),
+ * puis réinjectés — la réduction des newlines ne casse plus les commentaires //
+ * ni les littéraux multilignes du script inline de dashboard.html. */
+async function minifyHtml(html) {
+  const blocks = [];
+  html = html.replace(/<script>([\s\S]*?)<\/script>/gi, (m, js) => {
+    blocks.push(js);
+    return '\u0000SB' + (blocks.length - 1) + '\u0000';
+  });
+  html = html
     .replace(/<!--(?!\[if)[\s\S]*?-->/g, '')            // commentaires HTML
     .replace(/[ \t]+(\r?\n)[ \t]*/g, '$1')              // indentation inutile
     .replace(/(\r?\n){2,}/g, '\n')                      // lignes blanches
     .replace(/\n/g, ' ')                                // tout sur une ligne
-    .replace(/>\s+</g, '><')                            // whitespace entre balises
-    .replace(/<\/body>/i, GUARD + '</body>');           // garde-fou
+    .replace(/>\s+</g, '><');                           // whitespace entre balises
+  for (let i = 0; i < blocks.length; i++) {
+    let code = blocks[i];
+    try {
+      const res = await minify(code, {
+        mangle: true,
+        compress: { passes: 3, drop_console: true, drop_debugger: true },
+        format: { comments: false }
+      });
+      if (res && res.code) code = res.code;
+    } catch (e) { /* bloc refusé par terser : conservé tel quel */ }
+    html = html.split('\u0000SB' + i + '\u0000').join('<script>' + code.replace(/<\/script>/gi, '<\\/script>') + '</script>');
+  }
+  return html.replace(/<\/body>/i, GUARD + '</body>');
 }
 
 function copyItem(src, dest) {
@@ -83,7 +103,7 @@ async function walk(dir, fn) {
       const out = new CleanCSS({ level: 2 }).minify(fs.readFileSync(file, 'utf8'));
       if (out && out.styles) { fs.writeFileSync(file, out.styles); cssCount++; }
     } else if (ext === '.html') {
-      fs.writeFileSync(file, minifyHtml(fs.readFileSync(file, 'utf8'))); htmlCount++;
+      fs.writeFileSync(file, await minifyHtml(fs.readFileSync(file, 'utf8'))); htmlCount++;
     }
   });
   console.log(`Build terminé : ${jsCount} JS manglés, ${cssCount} CSS et ${htmlCount} HTML minifiés (+ garde-fou) dans dist/`);

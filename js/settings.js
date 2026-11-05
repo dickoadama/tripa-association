@@ -87,12 +87,12 @@ function viewDonnees() {
 }
 
 function viewSecurite() {
-  return `<div class="card" style="max-width:560px;"><div class="card__header"><h3>Code d'accès</h3></div>
+  return `<div class="card" style="max-width:560px;"><div class="card__header"><h3>Mot de passe</h3></div>
     <div class="card__body">
-      <div class="field"><label class="label">Code d'accès actuel</label><input class="input" type="password" id="curPwd"></div>
-      <div class="field"><label class="label">Nouveau code d'accès</label><input class="input" type="password" id="newPwd" minlength="4"></div>
-      <button class="btn btn--primary" id="savePwd"><i data-lucide="key-round"></i> Changer le code d'accès</button>
-      <p class="muted mt-4" style="font-size:13px;">🔒 Le code est stocké sous forme d'empreinte SHA-256 dans ce navigateur : aucun secret n'est envoyé à un serveur.</p>
+      <div class="field"><label class="label">Mot de passe actuel</label><input class="input" type="password" id="curPwd" autocomplete="current-password"></div>
+      <div class="field"><label class="label">Nouveau mot de passe</label><input class="input" type="password" id="newPwd" minlength="6" autocomplete="new-password"></div>
+      <button class="btn btn--primary" id="savePwd"><i data-lucide="key-round"></i> Changer le mot de passe</button>
+      <p class="muted mt-4" style="font-size:13px;">🔒 Le mot de passe sécurise votre compte cloud : vos données restent cloisonnées à votre compte et inaccessibles aux autres utilisateurs.</p>
     </div></div>`;
 }
 
@@ -115,7 +115,7 @@ function wireSettings() {
     const { error } = await changePassword(cur, nw);
     if (error) { showToast('Erreur : ' + error.message, 'danger'); return; }
     document.getElementById('curPwd').value = ''; document.getElementById('newPwd').value = '';
-    showToast('Code d’accès modifié.', 'success');
+    showToast('Mot de passe modifié.', 'success');
   });
 
   const bk = document.getElementById('backupBtn');

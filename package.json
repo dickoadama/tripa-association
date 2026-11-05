@@ -2,7 +2,7 @@
   "name": "tripa",
   "version": "3.0.0",
   "private": true,
-  "description": "TRIPA — gestion d'association, application 100 % statique (HTML/CSS/JS + localStorage). Build = minification pour publication.",
+  "description": "TRIPA — gestion d'association, frontend statique (HTML/CSS/JS vanilla) connecté à Supabase (Auth + PostgREST). Build = minification pour publication.",
   "scripts": {
     "build": "node build.js",
     "serve": "npx --yes http-server -p 10007 -c-1 ."

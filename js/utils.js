@@ -108,6 +108,18 @@ const NAV_FOOT = [
   {key:'settings',label:'Réglages',href:'settings.html',icon:'settings'},
   {key:'help',label:'Aide & À propos',href:'help.html',icon:'help-circle'}
 ];
+/* Navigation Super Admin : console de gestion des comptes uniquement
+ * (le Super Admin ne touche aucune donnée métier). */
+const NAV_SUPER = [
+  {key:'super',label:'Console Super Admin',href:'admin-management.html',icon:'shield'}
+];
+/* Navigation utilisateur invité : accès simple, limité à ces modules. */
+const USER_NAV_KEYS = ['dashboard','evenements','activites','communications','taches'];
+function navFor(role){
+  if(role==='super_admin') return {main:NAV_SUPER, foot:NAV_FOOT.filter(n=>n.key!=='activity'), section:'Plateforme'};
+  if(role==='user') return {main:NAV.filter(n=>USER_NAV_KEYS.includes(n.key)), foot:NAV_FOOT, section:'Gestion'};
+  return {main:NAV, foot:NAV_FOOT, section:'Gestion'};
+}
 
 function rowTitle(entity,row){
   const tf=ENTITY_SCHEMA[entity]&&ENTITY_SCHEMA[entity].titleField||[];
@@ -253,13 +265,14 @@ function buildLayout(activeKey,pageTitle){
   const fullName=[profile.prenom,profile.nom].filter(Boolean).join(' ')||'Admin';
   const nameHtml=esc(fullName), emailHtml=esc(profile.email||'');
 
-  const linksMain=NAV.map(n=>navLink(n,activeKey)).join('');
-  const linksFoot=NAV_FOOT.map(n=>navLink(n,activeKey)).join('');
+  const nav=navFor(profile.role||'admin');
+  const linksMain=nav.main.map(n=>navLink(n,activeKey)).join('');
+  const linksFoot=nav.foot.map(n=>navLink(n,activeKey)).join('');
 
   const sidebarHost=document.getElementById('sidebarHost');
   if(sidebarHost){ sidebarHost.className='sidebar';
     sidebarHost.innerHTML=`<div class="sidebar__logo">TRIPA</div>
-      <div class="sidebar__section">Gestion</div><nav class="sidebar__nav">${linksMain}</nav>
+      <div class="sidebar__section">${nav.section}</div><nav class="sidebar__nav">${linksMain}</nav>
       <div class="sidebar__section">Compte</div><nav class="sidebar__nav">${linksFoot}</nav>
       <div class="side-user"><div class="avatar">${esc(initials)}</div>
         <div style="min-width:0;flex:1;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${nameHtml}</div>

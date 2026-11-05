@@ -1,5 +1,5 @@
 /* TRIPA — Mon profil : vue d'ensemble du compte + activité (lecture seule).
- * L'édition des coordonnées et du code d'accès se fait dans Réglages. */
+ * L'édition des coordonnées et du mot de passe se fait dans Réglages. */
 document.addEventListener('DOMContentLoaded', async () => {
   const profile = await requireAuth(['active']); if (!profile) return;
   buildLayout('profile', 'Mon profil');
@@ -7,10 +7,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const initials = ((profile.prenom?.[0] || '') + (profile.nom?.[0] || '')).toUpperCase() || 'AD';
   const fullName = [profile.prenom, profile.nom].filter(Boolean).join(' ') || 'Admin';
-  const roleLabel = 'Administrateur';
-  const roleBadge = 'success';
-  const statusLabel = { active: 'Actif', pending: 'En attente', suspended: 'Suspendu', rejected: 'Rejeté' }[profile.status] || humanize(profile.status);
-  const statusBadge = { active: 'success', pending: 'warning', suspended: 'danger', rejected: 'muted' }[profile.status] || 'muted';
+  const roleLabel = { super_admin: 'Super Admin', admin: 'Administrateur', user: 'Utilisateur' }[profile.role] || 'Membre';
+  const roleBadge = profile.role === 'super_admin' ? 'info' : 'success';
+  const statusLabel = { active: 'Actif', pending: 'En attente', suspended: 'Suspendu', revoked: 'Révoqué' }[profile.status] || humanize(profile.status);
+  const statusBadge = { active: 'success', pending: 'warning', suspended: 'danger', revoked: 'muted' }[profile.status] || 'muted';
   const since = profile.created_at ? formatDate(profile.created_at) : '—';
   const asso = profile.asso_type ? humanize(profile.asso_type) : '—';
 
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     <div class="card">
       <div class="card__header"><h3>Sécurité</h3></div>
       <div class="card__body">
-        <p class="muted" style="font-size:14px;">🔒 Vos données et le code d'accès (stocké sous forme d'empreinte SHA-256) vivent uniquement dans ce navigateur : rien n'est envoyé vers un serveur. Pour changer votre code d'accès, rendez-vous dans <a href="settings.html">Réglages → Sécurité</a>.</p>
+        <p class="muted" style="font-size:14px;">🔒 Votre compte est protégé par un mot de passe et vos données sont stockées sur un cloud sécurisé, cloisonnées par compte (politiques RLS) et accessibles depuis n'importe quel appareil. Pour changer votre mot de passe, rendez-vous dans <a href="settings.html">Réglages → Sécurité</a>.</p>
       </div>
     </div>`;
 

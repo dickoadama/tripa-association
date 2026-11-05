@@ -1,13 +1,11 @@
-/* TRIPA — Auth (login / register) en mode statique 100 % local.
- * Le formulaire de « connexion » est en réalité un déverrouillage par code
- * d'accès local (hash SHA-256 stocké dans localStorage). Le formulaire
- * d'inscription définit ce code et renseigne le profil de l'association.
- *
- * Aucun email, aucun rôle distant, aucune validation Super Admin :
- *   - Si aucun code n'est défini, index.html redirige vers register.html.
- *   - Si un code existe déjà, register.html redirige vers index.html.
+/* TRIPA — Auth : page de connexion (index.html) et inscription (register.html).
+ * Comptes Supabase Auth (email + mot de passe). Rôles :
+ *   - super_admin : forcé par trigger SQL sur le PREMIER inscrit ;
+ *   - admin / user : créés uniquement via un lien d'invitation (?invite=token).
+ * Après connexion/inscription, routage par rôle :
+ *   super_admin → admin-management.html, sinon dashboard.html (ou ?next=).
  */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (window.lucide) lucide.createIcons();
 
   /* ---- Sélecteur de thème (clair → sombre → auto) ---- */
@@ -50,17 +48,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function clearInvalid() { document.querySelectorAll('.field.is-invalid').forEach(f => f.classList.remove('is-invalid')); }
   function loading(btn, on) { if (btn) { btn.classList.toggle('is-loading', on); btn.disabled = on; } }
+  function lockForm(on) {
+    const form = document.getElementById('register-form');
+    if (form) form.querySelector('button[type=submit]').disabled = !!on;
+  }
 
-  /* ---- « Code oublié » : instructions de reset DevTools ---- */
-  const forgot = document.getElementById('forgot');
-  if (forgot) forgot.addEventListener('click', e => {
-    e.preventDefault();
-    showAlert('ok', 'Réinitialiser : ouvrez DevTools (F12) → Console, tapez localStorage.removeItem("tripa_key") puis rechargez. Vos données restent dans le navigateur.');
-  });
+  const isLogin = !!document.getElementById('login-form');
+  const isRegister = !!document.getElementById('register-form');
+
+  /* ---- Déjà connecté → bonne page selon le rôle ---- */
+  if (await API.redirectIfAuthed()) return;
 
   /* ---- Jauge de robustesse (register) ---- */
   const pw = document.getElementById('password'), strength = document.getElementById('strength');
-  if (pw && strength && document.getElementById('register-form')) {
+  if (pw && strength && isRegister) {
     const fill = strength.querySelector('.strength__fill'), lbl = strength.querySelector('.strength__label');
     strength.hidden = false;
     pw.addEventListener('input', () => {
@@ -75,67 +76,147 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---- Aiguillage : première visite vs visite suivante ---- */
-  const isLogin = !!document.getElementById('login-form');
-  const isRegister = !!document.getElementById('register-form');
-  if (isLogin && !API.hasKey()) { location.href = 'register.html'; return; }
-  if (isRegister && API.hasKey()) { location.href = 'index.html'; return; }
+  /* ================= CONNEXION ================= */
+  if (isLogin) {
+    // Lien « créer le Super Admin » visible uniquement tant qu'aucun compte n'existe.
+    const firstRow = document.getElementById('first-admin-row');
+    if (firstRow) {
+      const superExists = await API.hasSuperAdmin();
+      if (!superExists) firstRow.hidden = false;
+    }
 
-  /* ---- Déverrouillage ---- */
-  const loginForm = document.getElementById('login-form');
-  if (loginForm) loginForm.addEventListener('submit', async e => {
-    e.preventDefault(); clearInvalid(); hideAlert();
-    const password = document.getElementById('password').value;
-    if (!password) { invalid('password', 'Code requis.'); return; }
-    const btn = loginForm.querySelector('button[type=submit]');
-    loading(btn, true);
-    await handleLogin(null, password, (k, m) => { loading(btn, false); showAlert(k, m); });
-  });
+    const forgot = document.getElementById('forgot');
+    if (forgot) forgot.addEventListener('click', async e => {
+      e.preventDefault(); hideAlert(); clearInvalid();
+      const email = (document.getElementById('email')?.value || '').trim();
+      if (!email) { invalid('email', 'Saisissez d’abord votre email.'); return; }
+      const { error } = await API.recoverPassword(email);
+      if (error) { showAlert('error', 'Erreur : ' + error.message); return; }
+      showAlert('ok', 'Si un compte existe avec cet email, un lien de réinitialisation vient de lui être envoyé.');
+    });
 
-  /* ---- Définition du code d'accès + profil ---- */
+    const loginForm = document.getElementById('login-form');
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault(); clearInvalid(); hideAlert();
+      const email = (document.getElementById('email').value || '').trim();
+      const password = document.getElementById('password').value;
+      let ok = true;
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { invalid('email', 'Email invalide.'); ok = false; }
+      if (!password) { invalid('password', 'Mot de passe requis.'); ok = false; }
+      if (!ok) return;
+      const btn = loginForm.querySelector('button[type=submit]');
+      loading(btn, true);
+      await handleLogin(email, password, (k, m) => { loading(btn, false); showAlert(k, m); });
+    });
+    return;
+  }
+
+  /* ================= INSCRIPTION ================= */
+  if (!isRegister) return;
+
+  let mode = 'invited';           // 'super' = création du Super Admin (premier inscrit), 'invited' = via lien, 'blocked'
+  let invitation = null;
+  const token = new URLSearchParams(location.search).get('invite');
+  const eyebrow = document.getElementById('reg-eyebrow');
+  const title = document.getElementById('reg-title');
+  const sub = document.getElementById('reg-sub');
+  const banner = document.getElementById('invite-banner');
+  const badge = document.getElementById('invite-badge');
+
+  if (token) {
+    const { data } = await API.fetchInvitation(token);
+    if (!data) {
+      mode = 'blocked';
+      showAlert('error', 'Lien d’invitation invalide ou déjà utilisé. Demandez un nouveau lien à votre administrateur.');
+      lockForm(true);
+    } else {
+      invitation = data;
+    }
+  } else {
+    const superExists = await API.hasSuperAdmin();
+    if (!superExists) {
+      mode = 'super';
+      if (eyebrow) eyebrow.textContent = 'Premier lancement';
+      if (title) title.textContent = 'Créer le compte Super Admin';
+      if (sub) sub.textContent = 'Vous serez le compte unique administrateur de la plateforme : création des administrateurs et gestion des comptes.';
+    } else {
+      mode = 'blocked';
+      showAlert('error', 'L’inscription se fait uniquement via un lien d’invitation reçu d’un administrateur. Déjà inscrit ? Connectez-vous.');
+      lockForm(true);
+    }
+  }
+
+  if (invitation) {
+    const roleLabel = invitation.role === 'admin' ? 'Administrateur' : 'Utilisateur';
+    if (eyebrow) eyebrow.textContent = 'Invitation ' + roleLabel;
+    if (title) title.textContent = 'Activer mon compte ' + roleLabel;
+    if (sub) sub.textContent = 'Votre invitation a été vérifiée. Complétez pour rejoindre l’association.';
+    if (banner) banner.hidden = false;
+    if (badge) { badge.textContent = '🎟️ Invitation ' + roleLabel + ' — email vérifié'; badge.className = 'badge badge--success'; }
+    const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    set('email', invitation.email); set('firstname', invitation.prenom);
+    set('lastname', invitation.nom); set('phone', invitation.telephone);
+    set('asso-type', invitation.asso_type);
+    const emailEl = document.getElementById('email');
+    if (emailEl) { emailEl.readOnly = true; emailEl.style.opacity = '.7'; }
+    ['firstname', 'lastname', 'phone', 'asso-type'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.disabled = true;
+    });
+  }
+
   const registerForm = document.getElementById('register-form');
-  if (registerForm) registerForm.addEventListener('submit', async e => {
-    e.preventDefault(); clearInvalid(); hideAlert();
+  registerForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (mode === 'blocked') return;
+    clearInvalid(); hideAlert();
+    const email = (document.getElementById('email').value || '').trim().toLowerCase();
     const pwd = document.getElementById('password').value;
     const confirmPwd = document.getElementById('confirm-password').value;
     let ok = true;
-    if (pwd.length < 4) { invalid('password', '4 caractères minimum.'); ok = false; }
-    if (pwd !== confirmPwd) { invalid('confirm-password', 'Les codes ne correspondent pas.'); ok = false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { invalid('email', 'Email invalide.'); ok = false; }
+    if (pwd.length < 6) { invalid('password', '6 caractères minimum.'); ok = false; }
+    if (pwd !== confirmPwd) { invalid('confirm-password', 'Les mots de passe ne correspondent pas.'); ok = false; }
     if (!ok) return;
+    const val = id => (document.getElementById(id)?.value || '').trim();
     const btn = registerForm.querySelector('button[type=submit]');
     loading(btn, true);
     await handleRegister({
-      password: pwd,
-      nom: (document.getElementById('lastname')?.value || '').trim(),
-      prenom: (document.getElementById('firstname')?.value || '').trim(),
-      email: (document.getElementById('email')?.value || '').trim().toLowerCase(),
-      telephone: (document.getElementById('phone')?.value || '').trim(),
-      asso_type: document.getElementById('asso-type')?.value || ''
+      email, password: pwd,
+      prenom: mode === 'super' ? val('firstname') : (invitation.prenom || val('firstname')),
+      nom: mode === 'super' ? val('lastname') : (invitation.nom || val('lastname')),
+      telephone: mode === 'super' ? val('phone') : (invitation.telephone || val('phone')),
+      asso_type: mode === 'super' ? val('asso-type') : (invitation.asso_type || val('asso-type')),
+      mode
     }, (k, m) => { loading(btn, false); showAlert(k, m); });
   });
 });
 
 /* ---------- Handlers ---------- */
-async function handleLogin(_email, password, feedback) {
+async function handleLogin(email, password, feedback) {
   feedback = feedback || ((k, m) => alert(m));
-  const { data, error } = await API.loginUser(null, password);
-  if (error) { feedback('error', error.message || 'Échec de déverrouillage.'); return; }
-  if (!data || !(data.user || data.profile)) { feedback('error', 'Aucun compte trouvé.'); return; }
+  const { data, error } = await API.loginUser(email, password);
+  if (error) { feedback('error', error.message || 'Échec de la connexion.'); return; }
+  const prof = data.profile;
+  if (prof.status !== 'active') {
+    const msg = prof.status === 'suspended' ? 'Compte suspendu — contactez le Super Admin.'
+              : prof.status === 'revoked'   ? 'Compte révoqué — contactez le Super Admin.'
+              : 'Compte en attente de validation.';
+    await API.logoutUser();
+    feedback('error', msg);
+    return;
+  }
+  if (prof.role === 'super_admin') { window.location.href = 'admin-management.html'; return; }
   const back = new URLSearchParams(location.search).get('next') || 'dashboard.html';
   window.location.href = back;
 }
 
 async function handleRegister(payload, feedback) {
   feedback = feedback || ((k, m) => alert(m));
-  const { error } = await API.registerUser({ password: payload.password });
-  if (error) { feedback('error', error.message || 'Échec de la définition du code.'); return; }
-  if (payload.nom || payload.prenom || payload.email || payload.telephone || payload.asso_type) {
-    await API.updateOwnProfile({
-      nom: payload.nom, prenom: payload.prenom,
-      email: payload.email, telephone: payload.telephone,
-      asso_type: payload.asso_type
-    });
-  }
-  feedback('ok', 'Code défini. Ouverture du tableau de bord…');
-  setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+  const { data, error } = await API.registerUser(payload);
+  if (error) { feedback('error', error.message || 'Échec de l\'inscription.'); return; }
+  const role = (data && data.profile && data.profile.role) || (payload.mode === 'super' ? 'super_admin' : 'user');
+  feedback('ok', 'Compte créé avec succès (' + role + '). Redirection…');
+  setTimeout(() => {
+    window.location.href = role === 'super_admin' ? 'admin-management.html' : 'dashboard.html';
+  }, 1200);
 }
