@@ -20,6 +20,7 @@ Cloisonnement garanti par les **politiques RLS** PostgreSQL (`supabase-schema.sq
 - **Journal d'activité** partagé (table `activity`, alimenté à chaque écriture).
 - **Réglages** en onglets : profil, apparence (thème, accent, densité), notifications, données (export/restauration JSON), mot de passe.
 - **Pages Profil & Aide**, **recherche globale** (Ctrl+K), **export/import CSV**, **export PDF/impression**.
+- **Interface adaptative** : barre latérale sur ordinateur Windows, navigation tactile sur mobile et affichage optimisé pour tablette.
 
 ## Architecture
 ```

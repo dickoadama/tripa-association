@@ -2,7 +2,7 @@
  * - Fichiers statiques : cache-d'abord (l'app s'ouvre hors-ligne), puis mise à jour
  *   en tâche de fond à chaque requête réseau réussie.
  * - Requêtes Supabase (cross-origin) : jamais cachées, laissées au navigateur. */
-const CACHE = 'tripa-v16';
+const CACHE = 'tripa-v17';
 const SHELL = [
   './index.html', './register.html', './dashboard.html', './entity.html',
   './admin-management.html', './settings.html', './profile.html', './help.html', './activity.html',
